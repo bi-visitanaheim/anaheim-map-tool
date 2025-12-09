@@ -11,10 +11,10 @@ interface ExportButtonProps {
   selectedHotels: SelectedHotel[];
 }
 
-// US Letter landscape dimensions in mm
-const PAGE_WIDTH_MM = 279.4; // 11 inches
-const PAGE_HEIGHT_MM = 215.9; // 8.5 inches
-const MARGIN_MM = 15; // ~0.6 inch margins
+// PDF page settings - US Letter landscape
+const PAGE_WIDTH_MM = 279.4;
+const PAGE_HEIGHT_MM = 215.9;
+const MARGIN_MM = 15;
 
 export function ExportButton({ selectedHotels }: ExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
@@ -43,7 +43,6 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       // Layout: Hotel list takes ~25% width, map takes ~70%, logo area ~5%
       const hotelListWidth = contentWidth * 0.22;
       const mapWidth = contentWidth * 0.58;
-      const logoWidth = contentWidth * 0.15;
       const gapWidth = contentWidth * 0.025;
 
       // Get the map container and capture it
