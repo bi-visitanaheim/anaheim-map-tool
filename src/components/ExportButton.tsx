@@ -11,6 +11,11 @@ interface ExportButtonProps {
   selectedHotels: SelectedHotel[];
 }
 
+// US Letter landscape dimensions in mm
+const PAGE_WIDTH_MM = 279.4; // 11 inches
+const PAGE_HEIGHT_MM = 215.9; // 8.5 inches
+const MARGIN_MM = 15; // ~0.6 inch margins
+
 export function ExportButton({ selectedHotels }: ExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
 
@@ -21,52 +26,27 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
     }
 
     setIsExporting(true);
-    toast.info('Generating high-quality PDF...');
+    toast.info('Generating PDF...');
 
     try {
-      // Create a hidden container for PDF rendering
-      const pdfContainer = document.createElement('div');
-      pdfContainer.style.cssText = `
-        position: absolute;
-        left: -9999px;
-        top: 0;
-        width: 1100px;
-        background: white;
-        font-family: 'Open Sans', sans-serif;
-      `;
-      document.body.appendChild(pdfContainer);
+      // Create PDF with US Letter landscape
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'letter',
+      });
 
-      // Build the hotel list sorted by number
-      const sortedHotels = [...selectedHotels].sort((a, b) => a.number - b.number);
-      const hotelListHTML = sortedHotels.map((sh) => {
-        const hotel = hotels.find(h => h.id === sh.hotelId);
-        if (!hotel) return '';
-        return `
-          <div style="display: flex; align-items: flex-start; margin-bottom: 8px; font-size: 11px;">
-            <div style="
-              width: 22px;
-              height: 22px;
-              min-width: 22px;
-              background: #E07A3B;
-              color: white;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-weight: 700;
-              font-size: 10px;
-              margin-right: 8px;
-              border: 2px solid white;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-            ">${sh.number}</div>
-            <div style="flex: 1; line-height: 1.3;">
-              <div style="font-weight: 600; color: #1a3a4a;">${hotel.name}</div>
-            </div>
-          </div>
-        `;
-      }).join('');
+      // Calculate content area dimensions
+      const contentWidth = PAGE_WIDTH_MM - (MARGIN_MM * 2);
+      const contentHeight = PAGE_HEIGHT_MM - (MARGIN_MM * 2);
+      
+      // Layout: Hotel list takes ~25% width, map takes ~70%, logo area ~5%
+      const hotelListWidth = contentWidth * 0.22;
+      const mapWidth = contentWidth * 0.58;
+      const logoWidth = contentWidth * 0.15;
+      const gapWidth = contentWidth * 0.025;
 
-      // Get the map container
+      // Get the map container and capture it
       const mapContainer = document.getElementById('map-container');
       if (!mapContainer) {
         throw new Error('Map container not found');
@@ -74,89 +54,111 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
 
       // Capture map at high resolution
       const mapCanvas = await html2canvas(mapContainer, {
-        scale: 4,
+        scale: 3,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#F5E6DB',
         logging: false,
       });
 
-      const mapDataUrl = mapCanvas.toDataURL('image/png', 1.0);
+      // Build sorted hotel list
+      const sortedHotels = [...selectedHotels].sort((a, b) => a.number - b.number);
 
-      // Build the PDF layout
-      pdfContainer.innerHTML = `
-        <div style="display: flex; padding: 20px; gap: 20px;">
-          <div style="width: 300px; flex-shrink: 0;">
-            <h1 style="
-              font-family: 'Montserrat', sans-serif;
-              font-size: 18px;
-              font-weight: 800;
-              color: #1a3a4a;
-              margin: 0 0 15px 0;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-            ">Partner Hotels</h1>
-            <div style="max-height: 700px; overflow: hidden;">
-              ${hotelListHTML}
-            </div>
-          </div>
-          <div style="flex: 1;">
-            <img src="${mapDataUrl}" style="width: 100%; height: auto; border-radius: 8px;" />
-          </div>
-        </div>
-      `;
+      // Set fonts and styles
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(14);
+      pdf.setTextColor(26, 58, 74); // Deep teal
 
-      // Wait for image to load
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Draw "PARTNER HOTELS" title
+      const titleX = MARGIN_MM;
+      const titleY = MARGIN_MM + 8;
+      pdf.text('PARTNER HOTELS', titleX, titleY);
 
-      // Capture the full layout
-      const fullCanvas = await html2canvas(pdfContainer, {
-        scale: 3,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
+      // Draw hotel list
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      
+      let yPos = titleY + 12;
+      const circleRadius = 3.5;
+      
+      sortedHotels.forEach((sh) => {
+        const hotel = hotels.find(h => h.id === sh.hotelId);
+        if (!hotel) return;
+
+        // Draw orange circle with number
+        pdf.setFillColor(224, 122, 59); // Orange accent
+        pdf.circle(titleX + circleRadius, yPos - 1.5, circleRadius, 'F');
+        
+        // Draw number in white
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7);
+        const numStr = sh.number.toString();
+        const numWidth = pdf.getTextWidth(numStr);
+        pdf.text(numStr, titleX + circleRadius - numWidth/2, yPos);
+        
+        // Draw hotel name
+        pdf.setTextColor(26, 58, 74);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        
+        // Truncate long names
+        let hotelName = hotel.name;
+        const maxNameWidth = hotelListWidth - 12;
+        while (pdf.getTextWidth(hotelName) > maxNameWidth && hotelName.length > 10) {
+          hotelName = hotelName.slice(0, -1);
+        }
+        if (hotelName !== hotel.name) {
+          hotelName += '...';
+        }
+        
+        pdf.text(hotelName, titleX + circleRadius * 2 + 4, yPos);
+        
+        yPos += 9;
       });
 
-      // Create PDF
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'letter',
-      });
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      // Calculate dimensions to fit on page
-      const canvasAspect = fullCanvas.width / fullCanvas.height;
-      const pageAspect = pageWidth / pageHeight;
-
-      let imgWidth, imgHeight;
-      if (canvasAspect > pageAspect) {
-        imgWidth = pageWidth - 10;
-        imgHeight = imgWidth / canvasAspect;
-      } else {
-        imgHeight = pageHeight - 10;
-        imgWidth = imgHeight * canvasAspect;
+      // Calculate map position and size
+      const mapX = MARGIN_MM + hotelListWidth + gapWidth;
+      const mapY = MARGIN_MM;
+      
+      // Scale map to fit available height while maintaining aspect ratio
+      const mapAspect = mapCanvas.width / mapCanvas.height;
+      let finalMapWidth = mapWidth;
+      let finalMapHeight = finalMapWidth / mapAspect;
+      
+      // If map is too tall, scale down by height
+      if (finalMapHeight > contentHeight) {
+        finalMapHeight = contentHeight;
+        finalMapWidth = finalMapHeight * mapAspect;
       }
 
-      const xOffset = (pageWidth - imgWidth) / 2;
-      const yOffset = (pageHeight - imgHeight) / 2;
-
+      // Add the map image
       pdf.addImage(
-        fullCanvas.toDataURL('image/png', 1.0),
+        mapCanvas.toDataURL('image/png', 1.0),
         'PNG',
-        xOffset,
-        yOffset,
-        imgWidth,
-        imgHeight,
+        mapX,
+        mapY,
+        finalMapWidth,
+        finalMapHeight,
         undefined,
         'FAST'
       );
 
-      // Clean up
-      document.body.removeChild(pdfContainer);
+      // Draw Visit Anaheim logo placeholder (text version)
+      const logoX = mapX + finalMapWidth + gapWidth;
+      const logoY = MARGIN_MM + 5;
+      
+      // Orange "visit" text
+      pdf.setTextColor(224, 122, 59);
+      pdf.setFont('helvetica', 'italic');
+      pdf.setFontSize(10);
+      pdf.text('visit', logoX, logoY);
+      
+      // Teal "Anaheim" text
+      pdf.setTextColor(26, 58, 74);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(14);
+      pdf.text('Anaheim', logoX, logoY + 6);
 
       // Save PDF
       const date = new Date().toISOString().split('T')[0];
