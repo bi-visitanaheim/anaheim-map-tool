@@ -29,29 +29,29 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
     toast.info('Generating PDF...');
 
     try {
-      // Create PDF in landscape mode with point units
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'pt',
         format: 'letter',
       });
 
-      // Content area
+      // Content area dimensions
       const contentWidth = PAGE_WIDTH_PT - (MARGIN_PT * 2);
       const contentHeight = PAGE_HEIGHT_PT - (MARGIN_PT * 2);
 
-      // Layout proportions: hotel list 22%, gap 3%, map 60%, gap 3%, logo 12%
-      const hotelListWidth = contentWidth * 0.22;
-      const gapWidth = contentWidth * 0.03;
-      const logoWidth = contentWidth * 0.12;
+      // Layout: hotel list 28%, gap 2%, map fills rest, gap 2%, logo 10%
+      const hotelListWidth = contentWidth * 0.28;
+      const gapWidth = contentWidth * 0.02;
+      const logoWidth = contentWidth * 0.10;
       const mapWidth = contentWidth - hotelListWidth - logoWidth - (gapWidth * 2);
 
-      // Get and capture the map
+      // Get the map container
       const mapContainer = document.getElementById('map-container');
       if (!mapContainer) {
         throw new Error('Map container not found');
       }
 
+      // Capture the map at high resolution
       const mapCanvas = await html2canvas(mapContainer, {
         scale: 4,
         useCORS: true,
@@ -69,14 +69,14 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
 
       // Title
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(16);
+      pdf.setFontSize(14);
       pdf.setTextColor(26, 58, 74);
-      pdf.text('PARTNER HOTELS', listX, listY + 16);
+      pdf.text('PARTNER HOTELS', listX, listY + 14);
 
       // Hotel entries
-      let yPos = listY + 40;
-      const circleRadius = 10;
-      const lineHeight = 28;
+      let yPos = listY + 36;
+      const circleRadius = 9;
+      const lineHeight = 24;
 
       sortedHotels.forEach((sh) => {
         const hotel = hotels.find(h => h.id === sh.hotelId);
@@ -89,50 +89,41 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         // Number in white
         pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(11);
+        pdf.setFontSize(10);
         const numStr = sh.number.toString();
         const numWidth = pdf.getTextWidth(numStr);
-        pdf.text(numStr, listX + circleRadius - numWidth / 2, yPos + 4);
+        pdf.text(numStr, listX + circleRadius - numWidth / 2, yPos + 3.5);
 
-        // Hotel name
+        // Hotel name - increased width for full names
         pdf.setTextColor(26, 58, 74);
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(11);
+        pdf.setFontSize(9);
 
         let hotelName = hotel.name;
-        const maxWidth = hotelListWidth - circleRadius * 2 - 15;
+        const maxWidth = hotelListWidth - circleRadius * 2 - 12;
         while (pdf.getTextWidth(hotelName) > maxWidth && hotelName.length > 10) {
           hotelName = hotelName.slice(0, -1);
         }
         if (hotelName !== hotel.name) hotelName += '...';
 
-        pdf.text(hotelName, listX + circleRadius * 2 + 8, yPos + 4);
+        pdf.text(hotelName, listX + circleRadius * 2 + 6, yPos + 3.5);
         yPos += lineHeight;
       });
 
-      // === DRAW MAP ===
+      // === DRAW MAP - FILL ENTIRE AVAILABLE SPACE ===
       const mapX = MARGIN_PT + hotelListWidth + gapWidth;
       const mapY = MARGIN_PT;
-
-      // Scale map to fill available height while maintaining aspect ratio
-      const mapAspect = mapCanvas.width / mapCanvas.height;
-      let finalMapHeight = contentHeight;
-      let finalMapWidth = finalMapHeight * mapAspect;
-
-      // If wider than available space, scale by width instead
-      if (finalMapWidth > mapWidth) {
-        finalMapWidth = mapWidth;
-        finalMapHeight = finalMapWidth / mapAspect;
-      }
-
-      // Center map vertically if it doesn't fill height
-      const mapYOffset = (contentHeight - finalMapHeight) / 2;
+      
+      // Map fills from top margin to bottom margin, full available width
+      // NO aspect ratio preservation - stretch to fill completely
+      const finalMapWidth = mapWidth;
+      const finalMapHeight = contentHeight;
 
       pdf.addImage(
         mapCanvas.toDataURL('image/png', 1.0),
         'PNG',
         mapX,
-        mapY + mapYOffset,
+        mapY,
         finalMapWidth,
         finalMapHeight,
         undefined,
@@ -146,14 +137,14 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       // "visit" in orange italic
       pdf.setTextColor(224, 122, 59);
       pdf.setFont('helvetica', 'italic');
-      pdf.setFontSize(14);
+      pdf.setFontSize(12);
       pdf.text('visit', logoX, logoY);
 
       // "Anaheim" in teal bold
       pdf.setTextColor(26, 58, 74);
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(20);
-      pdf.text('Anaheim', logoX, logoY + 20);
+      pdf.setFontSize(16);
+      pdf.text('Anaheim', logoX, logoY + 16);
 
       // Save
       const date = new Date().toISOString().split('T')[0];
