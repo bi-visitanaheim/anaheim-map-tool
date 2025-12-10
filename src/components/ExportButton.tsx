@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { SelectedHotel } from '@/hooks/useMarkerPositions';
 import { hotels } from '@/data/hotels';
@@ -39,26 +38,10 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const contentWidth = PAGE_WIDTH_PT - (MARGIN_PT * 2);
       const contentHeight = PAGE_HEIGHT_PT - (MARGIN_PT * 2);
 
-      // Layout: hotel list 28%, gap 2%, map fills rest, gap 2%, logo 10%
-      const hotelListWidth = contentWidth * 0.28;
+      // Layout: hotel list 30%, gap 2%, map fills rest (68%)
+      const hotelListWidth = contentWidth * 0.30;
       const gapWidth = contentWidth * 0.02;
-      const logoWidth = contentWidth * 0.10;
-      const mapWidth = contentWidth - hotelListWidth - logoWidth - (gapWidth * 2);
-
-      // Get the map container
-      const mapContainer = document.getElementById('map-container');
-      if (!mapContainer) {
-        throw new Error('Map container not found');
-      }
-
-      // Capture the map at high resolution
-      const mapCanvas = await html2canvas(mapContainer, {
-        scale: 4,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#F5E6DB',
-        logging: false,
-      });
+      const mapWidth = contentWidth - hotelListWidth - gapWidth;
 
       // Sort hotels by number
       const sortedHotels = [...selectedHotels].sort((a, b) => a.number - b.number);
@@ -94,7 +77,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         const numWidth = pdf.getTextWidth(numStr);
         pdf.text(numStr, listX + circleRadius - numWidth / 2, yPos + 3.5);
 
-        // Hotel name - increased width for full names
+        // Hotel name - with wider max width
         pdf.setTextColor(26, 58, 74);
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
@@ -110,41 +93,56 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         yPos += lineHeight;
       });
 
-      // === DRAW MAP - FILL ENTIRE AVAILABLE SPACE ===
+      // === LOAD AND DRAW MAP IMAGE ===
       const mapX = MARGIN_PT + hotelListWidth + gapWidth;
       const mapY = MARGIN_PT;
-      
-      // Map fills from top margin to bottom margin, full available width
-      // NO aspect ratio preservation - stretch to fill completely
-      const finalMapWidth = mapWidth;
-      const finalMapHeight = contentHeight;
+      const mapHeight = contentHeight;
 
+      // Load the map image directly (not through html2canvas)
+      const mapImage = await loadImage('/images/map-template.jpg');
+      
+      // Draw the map stretched to fill the available space
       pdf.addImage(
-        mapCanvas.toDataURL('image/png', 1.0),
-        'PNG',
+        mapImage,
+        'JPEG',
         mapX,
         mapY,
-        finalMapWidth,
-        finalMapHeight,
+        mapWidth,
+        mapHeight,
         undefined,
         'FAST'
       );
 
-      // === DRAW LOGO ===
-      const logoX = mapX + finalMapWidth + gapWidth;
-      const logoY = MARGIN_PT + 10;
+      // === DRAW MARKERS ON TOP OF MAP ===
+      // Markers are positioned using percentage coordinates
+      // We need to draw them at the correct position on the PDF map area
+      const markerRadius = 12;
 
-      // "visit" in orange italic
-      pdf.setTextColor(224, 122, 59);
-      pdf.setFont('helvetica', 'italic');
-      pdf.setFontSize(12);
-      pdf.text('visit', logoX, logoY);
+      sortedHotels.forEach((sh) => {
+        if (!sh.position) return;
 
-      // "Anaheim" in teal bold
-      pdf.setTextColor(26, 58, 74);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(16);
-      pdf.text('Anaheim', logoX, logoY + 16);
+        // Convert percentage position to PDF coordinates
+        // Position is stored as percentage (0-100) of the map container
+        const markerX = mapX + (sh.position.x / 100) * mapWidth;
+        const markerY = mapY + (sh.position.y / 100) * mapHeight;
+
+        // Draw orange circle
+        pdf.setFillColor(224, 122, 59);
+        pdf.circle(markerX, markerY, markerRadius, 'F');
+
+        // Draw white border
+        pdf.setDrawColor(255, 255, 255);
+        pdf.setLineWidth(2);
+        pdf.circle(markerX, markerY, markerRadius, 'S');
+
+        // Draw number in white
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11);
+        const numStr = sh.number.toString();
+        const numWidth = pdf.getTextWidth(numStr);
+        pdf.text(numStr, markerX - numWidth / 2, markerY + 4);
+      });
 
       // Save
       const date = new Date().toISOString().split('T')[0];
@@ -157,6 +155,28 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  // Helper function to load an image as base64
+  const loadImage = (src: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', 1.0));
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = src;
+    });
   };
 
   return (
