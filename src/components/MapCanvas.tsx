@@ -30,6 +30,7 @@ export function MapCanvas({ selectedHotels, onUpdatePosition }: MapCanvasProps) 
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-lg bg-anaheim-peach shadow-soft">
+      {/* Container ref wraps only the image area - markers are positioned relative to this */}
       <div 
         ref={containerRef}
         className="relative h-full w-full"
@@ -49,10 +50,11 @@ export function MapCanvas({ selectedHotels, onUpdatePosition }: MapCanvasProps) 
           </div>
         ) : (
           <>
+            {/* Image fills container completely - no letterboxing */}
             <img
               src="/images/map-template.jpg"
               alt="Anaheim Area Map"
-              className="h-full w-full object-contain"
+              className="absolute inset-0 h-full w-full object-cover"
               onLoad={() => setMapLoaded(true)}
               onError={() => setMapError(true)}
               draggable={false}
