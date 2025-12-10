@@ -23,22 +23,9 @@ export function MapCanvas({ selectedHotels, onUpdatePosition }: MapCanvasProps) 
     img.src = '/images/map-template.jpg';
   }, []);
 
-  const handlePositionChange = (hotelId: string, x: number, y: number) => {
-    if (containerRef.current) {
-      const percentX = (x / containerRef.current.offsetWidth) * 100;
-      const percentY = (y / containerRef.current.offsetHeight) * 100;
-      onUpdatePosition(hotelId, { x: percentX, y: percentY });
-    }
-  };
-
-  const getAbsolutePosition = (position: MarkerPosition | null) => {
-    if (!position || !containerRef.current) {
-      return { x: 100, y: 100 };
-    }
-    return {
-      x: (position.x / 100) * containerRef.current.offsetWidth,
-      y: (position.y / 100) * containerRef.current.offsetHeight,
-    };
+  // Position is already stored as percentages (0-100), pass directly to marker
+  const handlePositionChange = (hotelId: string, percentX: number, percentY: number) => {
+    onUpdatePosition(hotelId, { x: percentX, y: percentY });
   };
 
   return (
@@ -72,13 +59,16 @@ export function MapCanvas({ selectedHotels, onUpdatePosition }: MapCanvasProps) 
             />
             
             {mapLoaded && selectedHotels.map((hotel) => {
-              const absolutePos = getAbsolutePosition(hotel.position);
+              // Pass percentage positions directly - default to center if no position
+              const percentX = hotel.position?.x ?? 50;
+              const percentY = hotel.position?.y ?? 50;
+              
               return (
                 <DraggableMarker
                   key={hotel.hotelId}
                   number={hotel.number}
-                  initialX={absolutePos.x}
-                  initialY={absolutePos.y}
+                  initialPercentX={percentX}
+                  initialPercentY={percentY}
                   onPositionChange={(x, y) => handlePositionChange(hotel.hotelId, x, y)}
                   containerRef={containerRef}
                 />

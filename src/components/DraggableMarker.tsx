@@ -3,31 +3,33 @@ import { cn } from '@/lib/utils';
 
 interface DraggableMarkerProps {
   number: number;
-  initialX: number;
-  initialY: number;
-  onPositionChange: (x: number, y: number) => void;
+  initialPercentX: number; // Position as percentage (0-100)
+  initialPercentY: number; // Position as percentage (0-100)
+  onPositionChange: (percentX: number, percentY: number) => void;
   containerRef: React.RefObject<HTMLDivElement>;
 }
 
 export function DraggableMarker({
   number,
-  initialX,
-  initialY,
+  initialPercentX,
+  initialPercentY,
   onPositionChange,
   containerRef,
 }: DraggableMarkerProps) {
-  const [position, setPosition] = useState({ x: initialX, y: initialY });
+  // Store position as percentages (0-100)
+  const [position, setPosition] = useState({ x: initialPercentX, y: initialPercentY });
   const [isDragging, setIsDragging] = useState(false);
-  const [isPlaced, setIsPlaced] = useState(initialX !== 0 || initialY !== 0);
+  const [isPlaced, setIsPlaced] = useState(initialPercentX !== 0 || initialPercentY !== 0);
   const markerRef = useRef<HTMLDivElement>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
+  // Update position when initial values change
   useEffect(() => {
-    if (initialX !== 0 || initialY !== 0) {
-      setPosition({ x: initialX, y: initialY });
+    setPosition({ x: initialPercentX, y: initialPercentY });
+    if (initialPercentX !== 0 || initialPercentY !== 0) {
       setIsPlaced(true);
     }
-  }, [initialX, initialY]);
+  }, [initialPercentX, initialPercentY]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -63,14 +65,14 @@ export function DraggableMarker({
       if (!containerRef.current) return;
       
       const containerRect = containerRef.current.getBoundingClientRect();
-      const x = e.clientX - containerRect.left - dragOffsetRef.current.x;
-      const y = e.clientY - containerRect.top - dragOffsetRef.current.y;
+      const pixelX = e.clientX - containerRect.left - dragOffsetRef.current.x;
+      const pixelY = e.clientY - containerRect.top - dragOffsetRef.current.y;
       
-      // Clamp to container bounds
-      const clampedX = Math.max(0, Math.min(x, containerRect.width));
-      const clampedY = Math.max(0, Math.min(y, containerRect.height));
+      // Convert to percentages and clamp to 0-100
+      const percentX = Math.max(0, Math.min((pixelX / containerRect.width) * 100, 100));
+      const percentY = Math.max(0, Math.min((pixelY / containerRect.height) * 100, 100));
       
-      setPosition({ x: clampedX, y: clampedY });
+      setPosition({ x: percentX, y: percentY });
     };
 
     const handleTouchMove = (e: TouchEvent) => {
@@ -78,13 +80,14 @@ export function DraggableMarker({
       
       const touch = e.touches[0];
       const containerRect = containerRef.current.getBoundingClientRect();
-      const x = touch.clientX - containerRect.left - dragOffsetRef.current.x;
-      const y = touch.clientY - containerRect.top - dragOffsetRef.current.y;
+      const pixelX = touch.clientX - containerRect.left - dragOffsetRef.current.x;
+      const pixelY = touch.clientY - containerRect.top - dragOffsetRef.current.y;
       
-      const clampedX = Math.max(0, Math.min(x, containerRect.width));
-      const clampedY = Math.max(0, Math.min(y, containerRect.height));
+      // Convert to percentages and clamp to 0-100
+      const percentX = Math.max(0, Math.min((pixelX / containerRect.width) * 100, 100));
+      const percentY = Math.max(0, Math.min((pixelY / containerRect.height) * 100, 100));
       
-      setPosition({ x: clampedX, y: clampedY });
+      setPosition({ x: percentX, y: percentY });
     };
 
     const handleMouseUp = () => {
@@ -123,8 +126,9 @@ export function DraggableMarker({
         !isPlaced && "animate-pulse-glow"
       )}
       style={{
-        left: position.x,
-        top: position.y,
+        // Use CSS percentages for positioning - this makes markers scale with container
+        left: `${position.x}%`,
+        top: `${position.y}%`,
         transform: 'translate(-50%, -50%)',
         zIndex: isDragging ? 1000 : 10,
       }}
