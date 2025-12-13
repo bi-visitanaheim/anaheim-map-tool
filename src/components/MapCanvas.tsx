@@ -23,14 +23,13 @@ export function MapCanvas({ selectedHotels, onUpdatePosition }: MapCanvasProps) 
     img.src = '/images/map-template.jpg';
   }, []);
 
-  // Position is already stored as percentages (0-100), pass directly to marker
+  // Handle position change - receives percentages directly from DraggableMarker
   const handlePositionChange = (hotelId: string, percentX: number, percentY: number) => {
     onUpdatePosition(hotelId, { x: percentX, y: percentY });
   };
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-lg bg-anaheim-peach shadow-soft">
-      {/* Container ref wraps only the image area - markers are positioned relative to this */}
       <div 
         ref={containerRef}
         className="relative h-full w-full"
@@ -50,18 +49,17 @@ export function MapCanvas({ selectedHotels, onUpdatePosition }: MapCanvasProps) 
           </div>
         ) : (
           <>
-            {/* Image fills container completely - no letterboxing */}
             <img
               src="/images/map-template.jpg"
               alt="Anaheim Area Map"
-              className="absolute inset-0 h-full w-full object-cover"
+              className="h-full w-full object-contain"
               onLoad={() => setMapLoaded(true)}
               onError={() => setMapError(true)}
               draggable={false}
             />
             
             {mapLoaded && selectedHotels.map((hotel) => {
-              // Pass percentage positions directly - default to center if no position
+              // Pass percentages directly - default to center if no position
               const percentX = hotel.position?.x ?? 50;
               const percentY = hotel.position?.y ?? 50;
               
@@ -69,8 +67,8 @@ export function MapCanvas({ selectedHotels, onUpdatePosition }: MapCanvasProps) 
                 <DraggableMarker
                   key={hotel.hotelId}
                   number={hotel.number}
-                  initialPercentX={percentX}
-                  initialPercentY={percentY}
+                  percentX={percentX}
+                  percentY={percentY}
                   onPositionChange={(x, y) => handlePositionChange(hotel.hotelId, x, y)}
                   containerRef={containerRef}
                 />

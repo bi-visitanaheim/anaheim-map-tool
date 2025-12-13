@@ -3,33 +3,36 @@ import { cn } from '@/lib/utils';
 
 interface DraggableMarkerProps {
   number: number;
-  initialPercentX: number; // Position as percentage (0-100)
-  initialPercentY: number; // Position as percentage (0-100)
+  // Positions as percentages (0-100)
+  percentX: number;
+  percentY: number;
   onPositionChange: (percentX: number, percentY: number) => void;
   containerRef: React.RefObject<HTMLDivElement>;
 }
 
 export function DraggableMarker({
   number,
-  initialPercentX,
-  initialPercentY,
+  percentX,
+  percentY,
   onPositionChange,
   containerRef,
 }: DraggableMarkerProps) {
-  // Store position as percentages (0-100)
-  const [position, setPosition] = useState({ x: initialPercentX, y: initialPercentY });
+  // Store position as percentages for display
+  const [displayPercent, setDisplayPercent] = useState({ x: percentX, y: percentY });
   const [isDragging, setIsDragging] = useState(false);
-  const [isPlaced, setIsPlaced] = useState(initialPercentX !== 0 || initialPercentY !== 0);
+  const [isPlaced, setIsPlaced] = useState(percentX !== 0 || percentY !== 0);
   const markerRef = useRef<HTMLDivElement>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
-  // Update position when initial values change
+  // Update display when props change (e.g., loading saved position)
   useEffect(() => {
-    setPosition({ x: initialPercentX, y: initialPercentY });
-    if (initialPercentX !== 0 || initialPercentY !== 0) {
-      setIsPlaced(true);
+    if (!isDragging) {
+      setDisplayPercent({ x: percentX, y: percentY });
+      if (percentX !== 0 || percentY !== 0) {
+        setIsPlaced(true);
+      }
     }
-  }, [initialPercentX, initialPercentY]);
+  }, [percentX, percentY, isDragging]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -69,10 +72,10 @@ export function DraggableMarker({
       const pixelY = e.clientY - containerRect.top - dragOffsetRef.current.y;
       
       // Convert to percentages and clamp to 0-100
-      const percentX = Math.max(0, Math.min((pixelX / containerRect.width) * 100, 100));
-      const percentY = Math.max(0, Math.min((pixelY / containerRect.height) * 100, 100));
+      const newPercentX = Math.max(0, Math.min((pixelX / containerRect.width) * 100, 100));
+      const newPercentY = Math.max(0, Math.min((pixelY / containerRect.height) * 100, 100));
       
-      setPosition({ x: percentX, y: percentY });
+      setDisplayPercent({ x: newPercentX, y: newPercentY });
     };
 
     const handleTouchMove = (e: TouchEvent) => {
@@ -84,22 +87,24 @@ export function DraggableMarker({
       const pixelY = touch.clientY - containerRect.top - dragOffsetRef.current.y;
       
       // Convert to percentages and clamp to 0-100
-      const percentX = Math.max(0, Math.min((pixelX / containerRect.width) * 100, 100));
-      const percentY = Math.max(0, Math.min((pixelY / containerRect.height) * 100, 100));
+      const newPercentX = Math.max(0, Math.min((pixelX / containerRect.width) * 100, 100));
+      const newPercentY = Math.max(0, Math.min((pixelY / containerRect.height) * 100, 100));
       
-      setPosition({ x: percentX, y: percentY });
+      setDisplayPercent({ x: newPercentX, y: newPercentY });
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
       setIsPlaced(true);
-      onPositionChange(position.x, position.y);
+      // Notify parent with final percentage position
+      onPositionChange(displayPercent.x, displayPercent.y);
     };
 
     const handleTouchEnd = () => {
       setIsDragging(false);
       setIsPlaced(true);
-      onPositionChange(position.x, position.y);
+      // Notify parent with final percentage position
+      onPositionChange(displayPercent.x, displayPercent.y);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -113,7 +118,7 @@ export function DraggableMarker({
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isDragging, position, containerRef, onPositionChange]);
+  }, [isDragging, displayPercent, containerRef, onPositionChange]);
 
   return (
     <div
@@ -126,9 +131,9 @@ export function DraggableMarker({
         !isPlaced && "animate-pulse-glow"
       )}
       style={{
-        // Use CSS percentages for positioning - this makes markers scale with container
-        left: `${position.x}%`,
-        top: `${position.y}%`,
+        // Use CSS percentages for positioning - this scales automatically with container
+        left: `${displayPercent.x}%`,
+        top: `${displayPercent.y}%`,
         transform: 'translate(-50%, -50%)',
         zIndex: isDragging ? 1000 : 10,
       }}
