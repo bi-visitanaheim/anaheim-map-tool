@@ -56,33 +56,8 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         throw new Error('Map image not found');
       }
 
-      // Get container and image dimensions
-      const containerWidth = mapContainer.offsetWidth;
-      const containerHeight = mapContainer.offsetHeight;
-      const imageNaturalWidth = mapImage.naturalWidth;
-      const imageNaturalHeight = mapImage.naturalHeight;
-      const imageAspect = imageNaturalWidth / imageNaturalHeight;
-
-      // Calculate where the image actually displays within the container (due to object-contain)
-      const containerAspect = containerWidth / containerHeight;
-      let displayedImageWidth: number;
-      let displayedImageHeight: number;
-      let imageOffsetX: number;
-      let imageOffsetY: number;
-
-      if (imageAspect > containerAspect) {
-        // Image is wider - fits to container width, has vertical letterboxing
-        displayedImageWidth = containerWidth;
-        displayedImageHeight = containerWidth / imageAspect;
-        imageOffsetX = 0;
-        imageOffsetY = (containerHeight - displayedImageHeight) / 2;
-      } else {
-        // Image is taller - fits to container height, has horizontal letterboxing
-        displayedImageHeight = containerHeight;
-        displayedImageWidth = containerHeight * imageAspect;
-        imageOffsetX = (containerWidth - displayedImageWidth) / 2;
-        imageOffsetY = 0;
-      }
+      // Get image aspect ratio for PDF layout
+      const imageAspect = mapImage.naturalWidth / mapImage.naturalHeight;
 
       // Sort hotels by number
       const sortedHotels = [...selectedHotels].sort((a, b) => a.number - b.number);
@@ -120,51 +95,82 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
 
       currentY += 22;
 
-      // Calculate dynamic sizing based on hotel count
+      // Calculate dynamic sizing based on hotel count with text wrapping
       const availableHeight = PAGE_HEIGHT_PT - MARGIN_PT - currentY - 10;
       const hotelCount = sortedHotels.length;
       
-      // Calculate line height to fit all hotels
-      const maxLineHeight = 26;
-      const minLineHeight = 16;
-      let lineHeight = Math.min(maxLineHeight, Math.max(minLineHeight, availableHeight / hotelCount));
+      // Start with a base font size and adjust if needed
+      let fontSize = 8;
+      const textLineHeight = fontSize * 1.3; // Line height for wrapped text
+      const circleRadius = 6;
+      const textX = listX + circleRadius * 2 + 8;
+      const maxNameWidth = finalListWidth - circleRadius * 2 - 12;
+      const entryPadding = 4; // Padding between entries
       
-      // Calculate font size based on line height
-      const fontSize = Math.min(9, Math.max(6.5, lineHeight * 0.4));
-      const circleRadius = Math.min(7, Math.max(5, lineHeight * 0.28));
+      // Calculate total height needed with text wrapping
+      const calculateTotalHeight = (fSize: number): number => {
+        pdf.setFontSize(fSize);
+        pdf.setFont('helvetica', 'normal');
+        let total = 0;
+        const tLineHeight = fSize * 1.3;
+        sortedHotels.forEach((sh) => {
+          const hotel = hotels.find(h => h.id === sh.hotelId);
+          if (!hotel) return;
+          const wrappedLines = pdf.splitTextToSize(hotel.name, maxNameWidth);
+          const textHeight = wrappedLines.length * tLineHeight;
+          const entryHeight = Math.max(circleRadius * 2, textHeight) + entryPadding;
+          total += entryHeight;
+        });
+        return total;
+      };
+      
+      // Adjust font size if content doesn't fit
+      let totalHeight = calculateTotalHeight(fontSize);
+      while (totalHeight > availableHeight && fontSize > 5.5) {
+        fontSize -= 0.5;
+        totalHeight = calculateTotalHeight(fontSize);
+      }
+      
+      const actualTextLineHeight = fontSize * 1.3;
 
-      // Hotel entries
+      // Hotel entries with text wrapping
       sortedHotels.forEach((sh) => {
         const hotel = hotels.find(h => h.id === sh.hotelId);
         if (!hotel) return;
 
-        // Dark blue circle #004183
-        pdf.setFillColor(0, 65, 131);
-        pdf.circle(listX + circleRadius, currentY + circleRadius, circleRadius, 'F');
+        // Get wrapped lines for this hotel name
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(fontSize);
+        const wrappedLines: string[] = pdf.splitTextToSize(hotel.name, maxNameWidth);
+        const textHeight = wrappedLines.length * actualTextLineHeight;
+        const entryHeight = Math.max(circleRadius * 2, textHeight);
 
-        // Number in white
+        // Dark blue circle #004183 - vertically centered with text block
+        const circleY = currentY + entryHeight / 2;
+        pdf.setFillColor(0, 65, 131);
+        pdf.circle(listX + circleRadius, circleY, circleRadius, 'F');
+
+        // Number in white - centered in circle
         pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(fontSize);
         const numStr = sh.number.toString();
         const numWidth = pdf.getTextWidth(numStr);
-        pdf.text(numStr, listX + circleRadius - numWidth / 2, currentY + circleRadius + fontSize * 0.35);
+        pdf.text(numStr, listX + circleRadius - numWidth / 2, circleY + fontSize * 0.35);
 
-        // Hotel name
+        // Hotel name - wrapped text
         pdf.setTextColor(26, 58, 74);
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(fontSize);
-
-        let hotelName = hotel.name;
-        const maxNameWidth = finalListWidth - circleRadius * 2 - 8;
         
-        while (pdf.getTextWidth(hotelName) > maxNameWidth && hotelName.length > 10) {
-          hotelName = hotelName.slice(0, -1);
-        }
-        if (hotelName !== hotel.name) hotelName += '…';
+        // Calculate starting Y to vertically center text with the entry
+        const textStartY = currentY + (entryHeight - textHeight) / 2 + actualTextLineHeight * 0.8;
+        
+        wrappedLines.forEach((line: string, lineIndex: number) => {
+          pdf.text(line, textX, textStartY + lineIndex * actualTextLineHeight);
+        });
 
-        pdf.text(hotelName, listX + circleRadius * 2 + 6, currentY + circleRadius + fontSize * 0.35);
-        currentY += lineHeight;
+        currentY += entryHeight + entryPadding;
       });
 
       // === DRAW MAP ===
@@ -185,25 +191,16 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       );
 
       // === REDRAW MARKERS ON PDF ===
-      // Markers are stored as % of CONTAINER, but we need % of IMAGE
-      // Convert from container coordinates to image coordinates
+      // Markers are now stored as % of IMAGE directly, so we can apply them straight to the PDF
       const markerRadius = 8;
       
       sortedHotels.forEach((sh) => {
         if (!sh.position) return;
         
-        // Convert container percentage to pixel position in container
-        const containerPixelX = (sh.position.x / 100) * containerWidth;
-        const containerPixelY = (sh.position.y / 100) * containerHeight;
-        
-        // Convert container pixel position to image percentage
-        // by subtracting the image offset and dividing by displayed image size
-        const imagePercentX = ((containerPixelX - imageOffsetX) / displayedImageWidth) * 100;
-        const imagePercentY = ((containerPixelY - imageOffsetY) / displayedImageHeight) * 100;
-        
-        // Apply image percentage to PDF map dimensions
-        const pdfMarkerX = mapX + (imagePercentX / 100) * finalMapWidth;
-        const pdfMarkerY = mapY + (imagePercentY / 100) * finalMapHeight;
+        // Position is already stored as image percentage (0-100)
+        // Apply directly to PDF map dimensions
+        const pdfMarkerX = mapX + (sh.position.x / 100) * finalMapWidth;
+        const pdfMarkerY = mapY + (sh.position.y / 100) * finalMapHeight;
         
         // Draw dark blue circle with white border #004183
         pdf.setFillColor(0, 65, 131);

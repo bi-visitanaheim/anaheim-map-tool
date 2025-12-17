@@ -9,6 +9,7 @@ interface MapCanvasProps {
 
 export function MapCanvas({ selectedHotels, onUpdatePosition }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(false);
 
@@ -23,7 +24,7 @@ export function MapCanvas({ selectedHotels, onUpdatePosition }: MapCanvasProps) 
     img.src = '/images/map-template.jpg';
   }, []);
 
-  // Handle position change - receives percentages directly from DraggableMarker
+  // Handle position change - receives percentages of the IMAGE directly from DraggableMarker
   const handlePositionChange = (hotelId: string, percentX: number, percentY: number) => {
     onUpdatePosition(hotelId, { x: percentX, y: percentY });
   };
@@ -50,6 +51,7 @@ export function MapCanvas({ selectedHotels, onUpdatePosition }: MapCanvasProps) 
         ) : (
           <>
             <img
+              ref={imageRef}
               src="/images/map-template.jpg"
               alt="Anaheim Area Map"
               className="h-full w-full object-contain"
@@ -71,6 +73,7 @@ export function MapCanvas({ selectedHotels, onUpdatePosition }: MapCanvasProps) 
                   percentY={percentY}
                   onPositionChange={(x, y) => handlePositionChange(hotel.hotelId, x, y)}
                   containerRef={containerRef}
+                  imageRef={imageRef}
                 />
               );
             })}
