@@ -127,8 +127,8 @@ const Index = () => {
               <strong className="text-foreground">3.</strong> Export as high-quality PDF
             </span>
           </div>
-          <span className="text-xs">
-            Marker positions are saved automatically
+          <span className="text-xs italic">
+            Marker positions are saved automatically | Source: Hotel names and addresses are updated via Simpleview.
           </span>
         </div>
       </footer>
