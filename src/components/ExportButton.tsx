@@ -108,27 +108,14 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       
       const finalListWidth = hotelListWidth;
 
-      // === DRAW HOTEL LIST WITH BRANDING ===
+      // === DRAW HOTEL LIST ===
       const listX = MARGIN_PT;
       let currentY = MARGIN_PT;
-
-      // Visit Anaheim logo at top
-      pdf.setTextColor(224, 122, 59); // Orange
-      pdf.setFont('helvetica', 'italic');
-      pdf.setFontSize(14);
-      pdf.text('visit', listX, currentY + 14);
-
-      pdf.setTextColor(26, 58, 74); // Teal/Navy
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(22);
-      pdf.text('Anaheim', listX + 28, currentY + 14);
-
-      currentY += 32;
 
       // Partner Hotels title
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(11);
-      pdf.setTextColor(26, 58, 74);
+      pdf.setTextColor(137, 204, 226); // Light blue #89cce2
       pdf.text('PARTNER HOTELS', listX, currentY + 10);
 
       currentY += 22;
@@ -151,8 +138,8 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         const hotel = hotels.find(h => h.id === sh.hotelId);
         if (!hotel) return;
 
-        // Orange circle
-        pdf.setFillColor(224, 122, 59);
+        // Dark blue circle #004183
+        pdf.setFillColor(0, 65, 131);
         pdf.circle(listX + circleRadius, currentY + circleRadius, circleRadius, 'F');
 
         // Number in white
@@ -200,7 +187,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       // === REDRAW MARKERS ON PDF ===
       // Markers are stored as % of CONTAINER, but we need % of IMAGE
       // Convert from container coordinates to image coordinates
-      const markerRadius = 12;
+      const markerRadius = 8;
       
       sortedHotels.forEach((sh) => {
         if (!sh.position) return;
@@ -218,19 +205,19 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         const pdfMarkerX = mapX + (imagePercentX / 100) * finalMapWidth;
         const pdfMarkerY = mapY + (imagePercentY / 100) * finalMapHeight;
         
-        // Draw orange circle with white border
-        pdf.setFillColor(224, 122, 59);
+        // Draw dark blue circle with white border #004183
+        pdf.setFillColor(0, 65, 131);
         pdf.setDrawColor(255, 255, 255);
-        pdf.setLineWidth(2);
+        pdf.setLineWidth(1.5);
         pdf.circle(pdfMarkerX, pdfMarkerY, markerRadius, 'FD');
         
         // Draw number in white
         pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(11);
+        pdf.setFontSize(8);
         const numStr = sh.number.toString();
         const numWidth = pdf.getTextWidth(numStr);
-        pdf.text(numStr, pdfMarkerX - numWidth / 2, pdfMarkerY + 4);
+        pdf.text(numStr, pdfMarkerX - numWidth / 2, pdfMarkerY + 3);
       });
 
       // Save

@@ -126,7 +126,7 @@ export function DraggableMarker({
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
       className={cn(
-        "absolute flex h-7 w-7 cursor-grab select-none items-center justify-center rounded-full border-2 border-marker-border bg-marker-bg font-display text-sm font-bold text-marker-text shadow-marker transition-transform",
+        "absolute flex h-5 w-5 cursor-grab select-none items-center justify-center rounded-full border-[1.5px] border-marker-border bg-marker-bg font-display text-[10px] font-bold text-marker-text shadow-marker transition-transform",
         isDragging && "cursor-grabbing scale-110 z-50",
         !isPlaced && "animate-pulse-glow"
       )}

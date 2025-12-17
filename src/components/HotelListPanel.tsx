@@ -20,10 +20,19 @@ export function HotelListPanel({
 }: HotelListPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredHotels = hotels.filter(hotel =>
-    hotel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    hotel.city.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredHotels = hotels
+    .filter(hotel =>
+      hotel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      hotel.city.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      // Sort by distance from ACC (ascending)
+      if (a.distanceFromACC !== b.distanceFromACC) {
+        return a.distanceFromACC - b.distanceFromACC;
+      }
+      // If same distance, sort alphabetically by name
+      return a.name.localeCompare(b.name);
+    });
 
   const handleHotelClick = (hotel: Hotel) => {
     if (selectedHotelIds.includes(hotel.id)) {
