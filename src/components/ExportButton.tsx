@@ -28,6 +28,15 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
     toast.info('Generating PDF...');
 
     try {
+      // Load the company logo
+      const logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve, reject) => {
+        logoImg.onload = () => resolve();
+        logoImg.onerror = () => reject(new Error('Failed to load logo'));
+        logoImg.src = '/images/wog.png';
+      });
+
       // Create PDF in landscape mode with point units
       const pdf = new jsPDF({
         orientation: 'landscape',
@@ -87,6 +96,32 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const listX = MARGIN_PT;
       let currentY = MARGIN_PT;
 
+      // === DRAW COMPANY LOGO ===
+      const logoMaxWidth = 120;
+      const logoMaxHeight = 50;
+      const logoAspect = logoImg.naturalWidth / logoImg.naturalHeight;
+      let logoWidth: number;
+      let logoHeight: number;
+      
+      if (logoAspect > logoMaxWidth / logoMaxHeight) {
+        logoWidth = logoMaxWidth;
+        logoHeight = logoMaxWidth / logoAspect;
+      } else {
+        logoHeight = logoMaxHeight;
+        logoWidth = logoMaxHeight * logoAspect;
+      }
+      
+      pdf.addImage(
+        logoImg,
+        'PNG',
+        listX,
+        currentY,
+        logoWidth,
+        logoHeight
+      );
+      
+      currentY += logoHeight + 12; // Add spacing after logo
+
       // Partner Hotels title
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(11);
@@ -107,7 +142,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const maxNameWidth = finalListWidth - circleRadius * 2 - 12;
       const entryPadding = 4; // Padding between entries
       
-      // Calculate total height needed with text wrapping
+      // Calculate total height needed with text wrapping (name and address on separate lines)
       const calculateTotalHeight = (fSize: number): number => {
         pdf.setFontSize(fSize);
         pdf.setFont('helvetica', 'normal');
@@ -116,8 +151,10 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         sortedHotels.forEach((sh) => {
           const hotel = hotels.find(h => h.id === sh.hotelId);
           if (!hotel) return;
-          const wrappedLines = pdf.splitTextToSize(hotel.name, maxNameWidth);
-          const textHeight = wrappedLines.length * tLineHeight;
+          // Calculate height for name and address separately
+          const nameLines = pdf.splitTextToSize(hotel.name, maxNameWidth);
+          const addressLines = pdf.splitTextToSize(hotel.address, maxNameWidth);
+          const textHeight = (nameLines.length + addressLines.length) * tLineHeight;
           const entryHeight = Math.max(circleRadius * 2, textHeight) + entryPadding;
           total += entryHeight;
         });
@@ -133,16 +170,18 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       
       const actualTextLineHeight = fontSize * 1.3;
 
-      // Hotel entries with text wrapping
+      // Hotel entries with name and address on separate lines
       sortedHotels.forEach((sh) => {
         const hotel = hotels.find(h => h.id === sh.hotelId);
         if (!hotel) return;
 
-        // Get wrapped lines for this hotel name
+        // Get wrapped lines for name and address separately
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(fontSize);
-        const wrappedLines: string[] = pdf.splitTextToSize(hotel.name, maxNameWidth);
-        const textHeight = wrappedLines.length * actualTextLineHeight;
+        const nameLines: string[] = pdf.splitTextToSize(hotel.name, maxNameWidth);
+        const addressLines: string[] = pdf.splitTextToSize(hotel.address, maxNameWidth);
+        const totalLines = nameLines.length + addressLines.length;
+        const textHeight = totalLines * actualTextLineHeight;
         const entryHeight = Math.max(circleRadius * 2, textHeight);
 
         // Dark blue circle #004183 - vertically centered with text block
@@ -158,16 +197,23 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         const numWidth = pdf.getTextWidth(numStr);
         pdf.text(numStr, listX + circleRadius - numWidth / 2, circleY + fontSize * 0.35);
 
-        // Hotel name - wrapped text
-        pdf.setTextColor(26, 58, 74);
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(fontSize);
-        
         // Calculate starting Y to vertically center text with the entry
         const textStartY = currentY + (entryHeight - textHeight) / 2 + actualTextLineHeight * 0.8;
         
-        wrappedLines.forEach((line: string, lineIndex: number) => {
-          pdf.text(line, textX, textStartY + lineIndex * actualTextLineHeight);
+        // Draw hotel name lines (dark color)
+        pdf.setTextColor(26, 58, 74);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(fontSize);
+        nameLines.forEach((line: string, lineIndex: number) => {
+          const lineY = textStartY + lineIndex * actualTextLineHeight;
+          pdf.text(line, textX, lineY);
+        });
+        
+        // Draw address lines (orange color) on the next line(s)
+        pdf.setTextColor(250, 162, 27); // #faa21b for address
+        addressLines.forEach((line: string, lineIndex: number) => {
+          const lineY = textStartY + (nameLines.length + lineIndex) * actualTextLineHeight;
+          pdf.text(line, textX, lineY);
         });
 
         currentY += entryHeight + entryPadding;
