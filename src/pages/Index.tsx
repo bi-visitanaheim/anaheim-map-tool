@@ -16,10 +16,11 @@ const Index = () => {
     updateMarkerPosition,
     clearAllSelections,
     getHotelNumber,
+    isLoaded,
   } = useMarkerPositions();
 
   const selectedHotelIds = selectedHotels.map(h => h.hotelId);
-  
+
   // Panel resize state
   const [panelWidth, setPanelWidth] = useState(() => {
     const saved = localStorage.getItem('hotelPanelWidth');
@@ -43,23 +44,16 @@ const Index = () => {
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!containerRef.current) return;
-      
       const containerRect = containerRef.current.getBoundingClientRect();
       const newWidth = e.clientX - containerRect.left;
-      
-      // Clamp to min/max
       const clampedWidth = Math.min(Math.max(newWidth, MIN_PANEL_WIDTH), MAX_PANEL_WIDTH);
       setPanelWidth(clampedWidth);
     };
 
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
+    const handleMouseUp = () => setIsResizing(false);
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-
-    // Add a class to body to prevent text selection while resizing
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
 
@@ -71,16 +65,28 @@ const Index = () => {
     };
   }, [isResizing]);
 
+  // Show a brief loading screen while IndexedDB restores saved state
+  if (!isLoaded) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <span className="text-sm">Restoring saved selections…</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen flex-col bg-background">
-      <Header 
-        selectedHotels={selectedHotels} 
-        onClearAll={clearAllSelections} 
+      <Header
+        selectedHotels={selectedHotels}
+        onClearAll={clearAllSelections}
       />
-      
+
       <div ref={containerRef} className="flex flex-1 overflow-hidden">
-        {/* Hotel List Panel - Resizable */}
-        <aside 
+        {/* Hotel List Panel — Resizable */}
+        <aside
           className="flex-shrink-0 border-r border-border overflow-hidden"
           style={{ width: panelWidth }}
         >
@@ -104,7 +110,7 @@ const Index = () => {
           title="Drag to resize panel"
         />
 
-        {/* Map Area - Flexible */}
+        {/* Map Area */}
         <main className="flex-1 overflow-hidden p-4">
           <MapCanvas
             selectedHotels={selectedHotels}
