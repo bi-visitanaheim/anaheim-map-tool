@@ -169,8 +169,13 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
 
           if (y + eh > startY + maxColumnHeight) break;
 
-          // Circle – vertically centered within the full entry height
-          const circleY = y + eh / 2;
+          // Circle – top-aligned to match the first text line
+          // textStartY (baseline of first line) = y + lineHeight * 0.8
+          // circleY (centre) = first line baseline − fontSize*0.35 + circleRadius
+          //   which puts the circle top flush with the top of the cap-height
+          const firstLineBaseline = y + lineHeight * 0.8;
+          const circleY = firstLineBaseline - fontSize * 0.35 + circleRadius;
+
           pdf.setFillColor(0, 65, 131);
           pdf.circle(colStartX + circleRadius, circleY, circleRadius, 'F');
 
@@ -182,8 +187,8 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
           const numW = pdf.getTextWidth(numStr);
           pdf.text(numStr, colStartX + circleRadius - numW / 2, circleY + fontSize * 0.35);
 
-          // Text block vertically centered in the same entry height
-          const textStartY = y + (eh - textH) / 2 + lineHeight * 0.8;
+          // Text block starts at y
+          const textStartY = y + lineHeight * 0.8;
 
           // Hotel name – dark navy
           pdf.setTextColor(26, 58, 74);
