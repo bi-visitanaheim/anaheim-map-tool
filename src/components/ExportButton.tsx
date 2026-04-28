@@ -142,7 +142,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const maxNameWidth = finalListWidth - circleRadius * 2 - 12;
       const entryPadding = 4; // Padding between entries
       
-      // Calculate total height needed with text wrapping (name and address on separate lines)
+      // Calculate total height needed with text wrapping (name, address, and distance on separate lines)
       const calculateTotalHeight = (fSize: number): number => {
         pdf.setFontSize(fSize);
         pdf.setFont('helvetica', 'normal');
@@ -151,10 +151,11 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         sortedHotels.forEach((sh) => {
           const hotel = hotels.find(h => h.id === sh.hotelId);
           if (!hotel) return;
-          // Calculate height for name and address separately
+          // Calculate height for name, address, and distance separately
           const nameLines = pdf.splitTextToSize(hotel.name, maxNameWidth);
           const addressLines = pdf.splitTextToSize(hotel.address, maxNameWidth);
-          const textHeight = (nameLines.length + addressLines.length) * tLineHeight;
+          const distanceLines = pdf.splitTextToSize(`${hotel.distanceFromACC} mi from ACC`, maxNameWidth);
+          const textHeight = (nameLines.length + addressLines.length + distanceLines.length) * tLineHeight;
           const entryHeight = Math.max(circleRadius * 2, textHeight) + entryPadding;
           total += entryHeight;
         });
@@ -170,17 +171,18 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       
       const actualTextLineHeight = fontSize * 1.3;
 
-      // Hotel entries with name and address on separate lines
+      // Hotel entries with name, address, and distance on separate lines
       sortedHotels.forEach((sh) => {
         const hotel = hotels.find(h => h.id === sh.hotelId);
         if (!hotel) return;
 
-        // Get wrapped lines for name and address separately
+        // Get wrapped lines for name, address, and distance separately
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(fontSize);
         const nameLines: string[] = pdf.splitTextToSize(hotel.name, maxNameWidth);
         const addressLines: string[] = pdf.splitTextToSize(hotel.address, maxNameWidth);
-        const totalLines = nameLines.length + addressLines.length;
+        const distanceLines: string[] = pdf.splitTextToSize(`${hotel.distanceFromACC} mi from ACC`, maxNameWidth);
+        const totalLines = nameLines.length + addressLines.length + distanceLines.length;
         const textHeight = totalLines * actualTextLineHeight;
         const entryHeight = Math.max(circleRadius * 2, textHeight);
 
@@ -213,6 +215,13 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         pdf.setTextColor(250, 162, 27); // #faa21b for address
         addressLines.forEach((line: string, lineIndex: number) => {
           const lineY = textStartY + (nameLines.length + lineIndex) * actualTextLineHeight;
+          pdf.text(line, textX, lineY);
+        });
+
+        // Draw distance lines (gray color) after address
+        pdf.setTextColor(120, 120, 120); // gray for distance
+        distanceLines.forEach((line: string, lineIndex: number) => {
+          const lineY = textStartY + (nameLines.length + addressLines.length + lineIndex) * actualTextLineHeight;
           pdf.text(line, textX, lineY);
         });
 
