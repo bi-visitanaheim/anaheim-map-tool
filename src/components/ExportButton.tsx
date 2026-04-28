@@ -72,14 +72,9 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         logoWidth = logoMaxHeight * logoAspect;
       }
 
-      // ── Header block ─────────────────────────────────────────────────────────
-      // Logo sits at top-left.
-      // "Visit Anaheim Hotel Itinerary" sits to the right of the logo,
-      // vertically centered with it, in the same navy as the circle fill.
-      // "PARTNER HOTELS" sits below, as before.
       const titleFontSize = 14;
-      const logoGap = 14; // horizontal gap between logo right edge and title
-      const headerHeight = logoHeight + 12 + 22; // logo + spacing + "PARTNER HOTELS" row
+      const logoGap = 14;
+      const headerHeight = logoHeight + 12 + 22;
 
       // ── Legend area width ───────────────────────────────────────────────────
       const legendAreaWidth = useTwoColumns ? 340 : 320;
@@ -125,20 +120,17 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const listX = MARGIN_PT;
       let currentY = MARGIN_PT;
 
-      // Logo
       pdf.addImage(logoImg, 'PNG', listX, currentY, logoWidth, logoHeight);
 
-      // "Visit Anaheim Hotel Itinerary" – to the right of logo, vertically centred
       const titleX = listX + logoWidth + logoGap;
-      const titleY = currentY + logoHeight / 2 + titleFontSize * 0.35; // baseline-centred
+      const titleY = currentY + logoHeight / 2 + titleFontSize * 0.35;
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(titleFontSize);
-      pdf.setTextColor(0, 65, 131); // same navy as circle fill
+      pdf.setTextColor(0, 65, 131);
       pdf.text('Visit Anaheim Hotel Itinerary', titleX, titleY);
 
       currentY += logoHeight + 12;
 
-      // "PARTNER HOTELS" sub-label
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(11);
       pdf.setTextColor(137, 204, 226);
@@ -177,8 +169,13 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
 
           if (y + eh > startY + maxColumnHeight) break;
 
-          // Circle
-          const circleY = y + eh / 2;
+          // Circle – top-aligned to match the first text line
+          // textStartY (baseline of first line) = y + lineHeight * 0.8
+          // circleY (centre) = first line baseline − fontSize*0.35 + circleRadius
+          //   which puts the circle top flush with the top of the cap-height
+          const firstLineBaseline = y + lineHeight * 0.8;
+          const circleY = firstLineBaseline - fontSize * 0.35 + circleRadius;
+
           pdf.setFillColor(0, 65, 131);
           pdf.circle(colStartX + circleRadius, circleY, circleRadius, 'F');
 
@@ -190,7 +187,8 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
           const numW = pdf.getTextWidth(numStr);
           pdf.text(numStr, colStartX + circleRadius - numW / 2, circleY + fontSize * 0.35);
 
-          const textStartY = y + (eh - textH) / 2 + lineHeight * 0.8;
+          // Text block starts at y
+          const textStartY = y + lineHeight * 0.8;
 
           // Hotel name – dark navy
           pdf.setTextColor(26, 58, 74);
