@@ -16,6 +16,7 @@ interface DraggableMarkerProps {
   onPositionChange: (percentX: number, percentY: number) => void;
   containerRef: React.RefObject<HTMLDivElement>;
   imageRef: React.RefObject<HTMLImageElement>;
+  readOnly?: boolean;
 }
 
 // Calculate where the image actually displays within the container (due to object-contain)
@@ -34,13 +35,11 @@ function getImageBounds(
   let offsetY: number;
 
   if (imageAspect > containerAspect) {
-    // Image is wider - fits to container width, has vertical letterboxing
     displayedWidth = containerWidth;
     displayedHeight = containerWidth / imageAspect;
     offsetX = 0;
     offsetY = (containerHeight - displayedHeight) / 2;
   } else {
-    // Image is taller - fits to container height, has horizontal letterboxing
     displayedHeight = containerHeight;
     displayedWidth = containerHeight * imageAspect;
     offsetX = (containerWidth - displayedWidth) / 2;
@@ -57,8 +56,8 @@ export function DraggableMarker({
   onPositionChange,
   containerRef,
   imageRef,
+  readOnly = false,
 }: DraggableMarkerProps) {
-  // Store position as percentages of the IMAGE for display
   const [imagePercent, setImagePercent] = useState({ x: percentX, y: percentY });
   const [isDragging, setIsDragging] = useState(false);
   const [isPlaced, setIsPlaced] = useState(percentX !== 0 || percentY !== 0);
@@ -66,58 +65,39 @@ export function DraggableMarker({
   const markerRef = useRef<HTMLDivElement>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
-  // Calculate and update image bounds when container resizes
   const updateImageBounds = useCallback(() => {
     if (!containerRef.current || !imageRef.current) return;
-    
     const containerRect = containerRef.current.getBoundingClientRect();
     const { naturalWidth, naturalHeight } = imageRef.current;
-    
     if (naturalWidth === 0 || naturalHeight === 0) return;
-    
-    const bounds = getImageBounds(
-      containerRect.width,
-      containerRect.height,
-      naturalWidth,
-      naturalHeight
-    );
+    const bounds = getImageBounds(containerRect.width, containerRect.height, naturalWidth, naturalHeight);
     setImageBounds(bounds);
   }, [containerRef, imageRef]);
 
-  // Update bounds on mount and resize
   useEffect(() => {
     updateImageBounds();
-    
     const handleResize = () => updateImageBounds();
     window.addEventListener('resize', handleResize);
-    
-    // Also observe container size changes
     const resizeObserver = new ResizeObserver(handleResize);
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
-    }
-    
+    if (containerRef.current) resizeObserver.observe(containerRef.current);
     return () => {
       window.removeEventListener('resize', handleResize);
       resizeObserver.disconnect();
     };
   }, [updateImageBounds, containerRef]);
 
-  // Update display when props change (e.g., loading saved position)
   useEffect(() => {
     if (!isDragging) {
       setImagePercent({ x: percentX, y: percentY });
-      if (percentX !== 0 || percentY !== 0) {
-        setIsPlaced(true);
-      }
+      if (percentX !== 0 || percentY !== 0) setIsPlaced(true);
     }
   }, [percentX, percentY, isDragging]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (readOnly) return;
     e.preventDefault();
     setIsDragging(true);
-    updateImageBounds(); // Ensure we have fresh bounds
-    
+    updateImageBounds();
     const rect = markerRef.current?.getBoundingClientRect();
     if (rect) {
       dragOffsetRef.current = {
@@ -128,10 +108,10 @@ export function DraggableMarker({
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (readOnly) return;
     e.preventDefault();
     setIsDragging(true);
-    updateImageBounds(); // Ensure we have fresh bounds
-    
+    updateImageBounds();
     const touch = e.touches[0];
     const rect = markerRef.current?.getBoundingClientRect();
     if (rect) {
@@ -142,15 +122,10 @@ export function DraggableMarker({
     }
   };
 
-  // Convert container pixel position to image percentage
   const containerToImagePercent = useCallback((pixelX: number, pixelY: number): { x: number; y: number } => {
     if (!imageBounds) return { x: 50, y: 50 };
-    
-    // Convert container pixel to image percentage
     const imageX = ((pixelX - imageBounds.offsetX) / imageBounds.width) * 100;
     const imageY = ((pixelY - imageBounds.offsetY) / imageBounds.height) * 100;
-    
-    // Clamp to 0-100
     return {
       x: Math.max(0, Math.min(imageX, 100)),
       y: Math.max(0, Math.min(imageY, 100)),
@@ -162,38 +137,30 @@ export function DraggableMarker({
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!containerRef.current || !imageBounds) return;
-      
       const containerRect = containerRef.current.getBoundingClientRect();
       const pixelX = e.clientX - containerRect.left - dragOffsetRef.current.x;
       const pixelY = e.clientY - containerRect.top - dragOffsetRef.current.y;
-      
-      const newPercent = containerToImagePercent(pixelX, pixelY);
-      setImagePercent(newPercent);
+      setImagePercent(containerToImagePercent(pixelX, pixelY));
     };
 
     const handleTouchMove = (e: TouchEvent) => {
       if (!containerRef.current || !imageBounds) return;
-      
       const touch = e.touches[0];
       const containerRect = containerRef.current.getBoundingClientRect();
       const pixelX = touch.clientX - containerRect.left - dragOffsetRef.current.x;
       const pixelY = touch.clientY - containerRect.top - dragOffsetRef.current.y;
-      
-      const newPercent = containerToImagePercent(pixelX, pixelY);
-      setImagePercent(newPercent);
+      setImagePercent(containerToImagePercent(pixelX, pixelY));
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
       setIsPlaced(true);
-      // Notify parent with final IMAGE percentage position
       onPositionChange(imagePercent.x, imagePercent.y);
     };
 
     const handleTouchEnd = () => {
       setIsDragging(false);
       setIsPlaced(true);
-      // Notify parent with final IMAGE percentage position
       onPositionChange(imagePercent.x, imagePercent.y);
     };
 
@@ -210,23 +177,15 @@ export function DraggableMarker({
     };
   }, [isDragging, imagePercent, containerRef, onPositionChange, imageBounds, containerToImagePercent]);
 
-  // Convert image percentage to container pixel position for rendering
   const getContainerPosition = (): { left: string; top: string } => {
     if (!imageBounds || !containerRef.current) {
-      // Fallback: use container percentage (will be slightly off but better than nothing)
       return { left: `${imagePercent.x}%`, top: `${imagePercent.y}%` };
     }
-    
     const containerRect = containerRef.current.getBoundingClientRect();
-    
-    // Convert image percentage to pixel position within container
     const pixelX = imageBounds.offsetX + (imagePercent.x / 100) * imageBounds.width;
     const pixelY = imageBounds.offsetY + (imagePercent.y / 100) * imageBounds.height;
-    
-    // Convert to container percentage for CSS
     const containerPercentX = (pixelX / containerRect.width) * 100;
     const containerPercentY = (pixelY / containerRect.height) * 100;
-    
     return {
       left: `${containerPercentX}%`,
       top: `${containerPercentY}%`,
@@ -241,7 +200,9 @@ export function DraggableMarker({
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
       className={cn(
-        "absolute flex h-5 w-5 cursor-grab select-none items-center justify-center rounded-full border-[1.5px] border-marker-border bg-marker-bg font-display text-[10px] font-bold text-marker-text shadow-marker transition-transform",
+        "absolute flex h-5 w-5 select-none items-center justify-center rounded-full border-[1.5px] border-marker-border bg-marker-bg font-display text-[10px] font-bold text-marker-text shadow-marker transition-transform",
+        !readOnly && "cursor-grab",
+        readOnly && "cursor-default",
         isDragging && "cursor-grabbing scale-110 z-50",
         !isPlaced && "animate-pulse-glow"
       )}
