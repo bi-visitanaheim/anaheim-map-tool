@@ -49,7 +49,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const contentHeight = PAGE_HEIGHT_PT - (MARGIN_PT * 2);
       
       // Hotel list gets wider width to accommodate full hotel names
-      const hotelListWidth = 240;
+      const hotelListWidth = 260;
       const gapWidth = 12;
       const availableMapWidth = contentWidth - hotelListWidth - gapWidth;
       const availableMapHeight = contentHeight;
@@ -132,15 +132,13 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
 
       // Calculate dynamic sizing based on hotel count with text wrapping
       const availableHeight = PAGE_HEIGHT_PT - MARGIN_PT - currentY - 10;
-      const hotelCount = sortedHotels.length;
       
-      // Start with a base font size and adjust if needed
-      let fontSize = 8;
-      const textLineHeight = fontSize * 1.3; // Line height for wrapped text
-      const circleRadius = 6;
+      // Increased base font size from 8 → 10, minimum from 5.5 → 7
+      let fontSize = 10;
+      const circleRadius = 7; // increased from 6
       const textX = listX + circleRadius * 2 + 8;
       const maxNameWidth = finalListWidth - circleRadius * 2 - 12;
-      const entryPadding = 4; // Padding between entries
+      const entryPadding = 5; // slightly more padding between entries
       
       // Calculate total height needed with text wrapping (name, address, and distance on separate lines)
       const calculateTotalHeight = (fSize: number): number => {
@@ -162,9 +160,9 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         return total;
       };
       
-      // Adjust font size if content doesn't fit
+      // Adjust font size if content doesn't fit — minimum raised to 7
       let totalHeight = calculateTotalHeight(fontSize);
-      while (totalHeight > availableHeight && fontSize > 5.5) {
+      while (totalHeight > availableHeight && fontSize > 7) {
         fontSize -= 0.5;
         totalHeight = calculateTotalHeight(fontSize);
       }
