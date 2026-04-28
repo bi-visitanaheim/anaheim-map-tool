@@ -71,9 +71,17 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         logoHeight = logoMaxHeight;
         logoWidth = logoMaxHeight * logoAspect;
       }
-      const headerHeight = logoHeight + 12 + 22;
 
-      // ── Legend area width ────────────────────────────────────────────────────
+      // ── Header block ─────────────────────────────────────────────────────────
+      // Logo sits at top-left.
+      // "Visit Anaheim Hotel Itinerary" sits to the right of the logo,
+      // vertically centered with it, in the same navy as the circle fill.
+      // "PARTNER HOTELS" sits below, as before.
+      const titleFontSize = 14;
+      const logoGap = 14; // horizontal gap between logo right edge and title
+      const headerHeight = logoHeight + 12 + 22; // logo + spacing + "PARTNER HOTELS" row
+
+      // ── Legend area width ───────────────────────────────────────────────────
       const legendAreaWidth = useTwoColumns ? 340 : 320;
       const gapWidth = 12;
 
@@ -103,7 +111,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         mapOffsetX = (availableMapWidth - finalMapWidth) / 2;
       }
 
-      // ── Cap legend height to map bottom ──────────────────────────────────────
+      // ── Cap legend height to map bottom ─────────────────────────────────────
       const legendMaxBottom = MARGIN_PT + mapOffsetY + finalMapHeight;
       const listStartY = MARGIN_PT + headerHeight;
       const maxColumnHeight = legendMaxBottom - listStartY - 4;
@@ -117,16 +125,27 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const listX = MARGIN_PT;
       let currentY = MARGIN_PT;
 
+      // Logo
       pdf.addImage(logoImg, 'PNG', listX, currentY, logoWidth, logoHeight);
+
+      // "Visit Anaheim Hotel Itinerary" – to the right of logo, vertically centred
+      const titleX = listX + logoWidth + logoGap;
+      const titleY = currentY + logoHeight / 2 + titleFontSize * 0.35; // baseline-centred
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(titleFontSize);
+      pdf.setTextColor(0, 65, 131); // same navy as circle fill
+      pdf.text('Visit Anaheim Hotel Itinerary', titleX, titleY);
+
       currentY += logoHeight + 12;
 
+      // "PARTNER HOTELS" sub-label
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(11);
       pdf.setTextColor(137, 204, 226);
       pdf.text('PARTNER HOTELS', listX, currentY + 10);
       currentY += 22;
 
-      // ── Split hotels into columns ─────────────────────────────────────────────
+      // ── Split hotels into columns ────────────────────────────────────────────
       const col1Hotels = useTwoColumns ? sortedHotels.slice(0, 10) : sortedHotels;
       const col2Hotels = useTwoColumns ? sortedHotels.slice(10) : [];
 
@@ -187,7 +206,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
             pdf.text(line, textX, textStartY + (nameLines.length + i) * lineHeight);
           });
 
-          // Distance from ACC – #2196f3 (33, 150, 243)
+          // Distance from ACC – #2196f3
           pdf.setTextColor(33, 150, 243);
           distLines.forEach((line: string, i: number) => {
             pdf.text(
