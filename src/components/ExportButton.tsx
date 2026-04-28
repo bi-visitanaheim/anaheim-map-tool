@@ -49,15 +49,6 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const sortedHotels = [...selectedHotels].sort((a, b) => a.number - b.number);
       const useTwoColumns = sortedHotels.length > 10;
 
-      // ── Sizing constants ─────────────────────────────────────────────────────
-      const circleRadius = 7;
-      const circleDiameter = circleRadius * 2;
-      const circleToTextGap = 8;
-      const colGap = 14;
-      const fontSize = 10;
-      const lineHeight = fontSize * 1.3;
-      const entryPadding = 5;
-
       // ── Logo sizing ──────────────────────────────────────────────────────────
       const logoMaxWidth = 120;
       const logoMaxHeight = 50;
@@ -111,10 +102,50 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const listStartY = MARGIN_PT + headerHeight;
       const maxColumnHeight = legendMaxBottom - listStartY - 4;
 
-      // ── Column text widths ───────────────────────────────────────────────────
-      const singleColTextWidth = legendAreaWidth - circleDiameter - circleToTextGap;
+      // ── Column text widths (badge is badgeW wide) ─────────────────────────
+      const badgeW = 16;
+      const badgeToTextGap = 6;
+      const colGap = 14;
+      const entryPadding = 3;
+
+      const singleColTextWidth = legendAreaWidth - badgeW - badgeToTextGap;
       const twoColEachWidth = (legendAreaWidth - colGap) / 2;
-      const twoColTextWidth = twoColEachWidth - circleDiameter - circleToTextGap;
+      const twoColTextWidth = twoColEachWidth - badgeW - badgeToTextGap;
+
+      // ── Auto-scale font to fit all hotels in available column height ─────────
+      // Start at 10pt and step down to 6pt minimum until everything fits.
+      const colHotels1 = useTwoColumns ? sortedHotels.slice(0, 10) : sortedHotels;
+      const colHotels2 = useTwoColumns ? sortedHotels.slice(10) : [];
+
+      const measureColumnHeight = (colHotels: SelectedHotel[], maxTextW: number, fs: number) => {
+        const lh = fs * 1.3;
+        let total = 0;
+        for (const sh of colHotels) {
+          const hotel = hotels.find((h) => h.id === sh.hotelId);
+          if (!hotel) continue;
+          pdf.setFontSize(fs);
+          const nameLines: string[] = pdf.splitTextToSize(hotel.name, maxTextW);
+          const addrLines: string[] = pdf.splitTextToSize(hotel.address, maxTextW);
+          const distLines: string[] = pdf.splitTextToSize(`${hotel.distanceFromACC} mi from ACC`, maxTextW);
+          const totalLines = nameLines.length + addrLines.length + distLines.length;
+          const textH = totalLines * lh;
+          const eh = Math.max(badgeW, textH);
+          total += eh + entryPadding;
+        }
+        return total;
+      };
+
+      let fontSize = 10;
+      const minFontSize = 6;
+      while (fontSize > minFontSize) {
+        const textW = useTwoColumns ? twoColTextWidth : singleColTextWidth;
+        const h1 = measureColumnHeight(colHotels1, textW, fontSize);
+        const h2 = useTwoColumns ? measureColumnHeight(colHotels2, twoColTextWidth, fontSize) : 0;
+        const tallest = Math.max(h1, h2);
+        if (tallest <= maxColumnHeight) break;
+        fontSize -= 0.5;
+      }
+      const lineHeight = fontSize * 1.3;
 
       // ── Draw header ──────────────────────────────────────────────────────────
       const listX = MARGIN_PT;
@@ -137,10 +168,6 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       pdf.text('PARTNER HOTELS', listX, currentY + 10);
       currentY += 22;
 
-      // ── Split hotels into columns ────────────────────────────────────────────
-      const col1Hotels = useTwoColumns ? sortedHotels.slice(0, 10) : sortedHotels;
-      const col2Hotels = useTwoColumns ? sortedHotels.slice(10) : [];
-
       // ── Draw one column ───────────────────────────────────────────────────────
       const drawColumn = (
         columnHotels: SelectedHotel[],
@@ -149,7 +176,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         maxTextW: number
       ) => {
         let y = startY;
-        const textX = colStartX + circleDiameter + circleToTextGap;
+        const textX = colStartX + badgeW + badgeToTextGap;
 
         for (const sh of columnHotels) {
           const hotel = hotels.find((h) => h.id === sh.hotelId);
@@ -165,22 +192,22 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
           );
           const totalLines = nameLines.length + addrLines.length + distLines.length;
           const textH = totalLines * lineHeight;
-          const eh = Math.max(circleDiameter, textH);
+          const eh = Math.max(badgeW, textH);
 
           if (y + eh > startY + maxColumnHeight) break;
 
-          // Circle – vertically centered within the full entry height
-          const circleY = y + eh / 2;
+          // ── Tall rounded-rectangle badge spanning full entry height ──────────
+          const badgeRadius = 3;
           pdf.setFillColor(0, 65, 131);
-          pdf.circle(colStartX + circleRadius, circleY, circleRadius, 'F');
+          pdf.roundedRect(colStartX, y, badgeW, eh, badgeRadius, badgeRadius, 'F');
 
-          // Number in circle
+          // Number centered in badge
           pdf.setTextColor(255, 255, 255);
           pdf.setFont('helvetica', 'bold');
           pdf.setFontSize(fontSize);
           const numStr = sh.number.toString();
           const numW = pdf.getTextWidth(numStr);
-          pdf.text(numStr, colStartX + circleRadius - numW / 2, circleY + fontSize * 0.35);
+          pdf.text(numStr, colStartX + badgeW / 2 - numW / 2, y + eh / 2 + fontSize * 0.35);
 
           // Text block vertically centered in the same entry height
           const textStartY = y + (eh - textH) / 2 + lineHeight * 0.8;
@@ -216,10 +243,10 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       if (useTwoColumns) {
         const col1X = listX;
         const col2X = listX + twoColEachWidth + colGap;
-        drawColumn(col1Hotels, col1X, currentY, twoColTextWidth);
-        drawColumn(col2Hotels, col2X, currentY, twoColTextWidth);
+        drawColumn(colHotels1, col1X, currentY, twoColTextWidth);
+        drawColumn(colHotels2, col2X, currentY, twoColTextWidth);
       } else {
-        drawColumn(col1Hotels, listX, currentY, singleColTextWidth);
+        drawColumn(colHotels1, listX, currentY, singleColTextWidth);
       }
 
       // ── Draw map ──────────────────────────────────────────────────────────────
