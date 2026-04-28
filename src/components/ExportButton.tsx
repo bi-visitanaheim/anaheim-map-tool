@@ -68,7 +68,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const headerHeight = logoHeight + 12 + 22;
 
       // ── Legend area width ───────────────────────────────────────────────────
-      const legendAreaWidth = useTwoColumns ? 340 : 320;
+      const legendAreaWidth = useTwoColumns ? 360 : 320;
       const gapWidth = 12;
 
       // ── Map geometry ─────────────────────────────────────────────────────────
@@ -102,7 +102,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const listStartY = MARGIN_PT + headerHeight;
       const maxColumnHeight = legendMaxBottom - listStartY - 4;
 
-      // ── Sizing constants ───────────────────────────────────────────────────────
+      // ── Sizing constants ─────────────────────────────────────────────────────
       const badgeW = 16;
       const badgeToTextGap = 6;
       const colGap = 14;
@@ -116,12 +116,13 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const colHotels1 = useTwoColumns ? sortedHotels.slice(0, 10) : sortedHotels;
       const colHotels2 = useTwoColumns ? sortedHotels.slice(10) : [];
 
+      // entryPadding only between entries, not after the last one
       const measureColumnHeight = (colHotels: SelectedHotel[], maxTextW: number, fs: number) => {
         const lh = fs * 1.3;
         let total = 0;
-        for (const sh of colHotels) {
+        colHotels.forEach((sh, idx) => {
           const hotel = hotels.find((h) => h.id === sh.hotelId);
-          if (!hotel) continue;
+          if (!hotel) return;
           pdf.setFontSize(fs);
           const nameLines: string[] = pdf.splitTextToSize(hotel.name, maxTextW);
           const addrLines: string[] = pdf.splitTextToSize(hotel.address, maxTextW);
@@ -129,8 +130,9 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
           const totalLines = nameLines.length + addrLines.length + distLines.length;
           const textH = totalLines * lh;
           const eh = Math.max(badgeW, textH);
-          total += eh + entryPadding;
-        }
+          total += eh;
+          if (idx < colHotels.length - 1) total += entryPadding;
+        });
         return total;
       };
 
@@ -178,9 +180,10 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         let y = startY;
         const textX = colStartX + badgeW + badgeToTextGap;
 
-        // Pre-filter to only hotels that will actually fit, so we know the last one
+        // Pre-filter: collect hotels that fit without counting trailing padding
         const visibleHotels: SelectedHotel[] = [];
-        let testY = startY;
+        const entryHeights: number[] = [];
+        let testY = 0;
         for (const sh of columnHotels) {
           const hotel = hotels.find((h) => h.id === sh.hotelId);
           if (!hotel) continue;
@@ -191,22 +194,27 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
           const totalLines = nameLines.length + addrLines.length + distLines.length;
           const textH = totalLines * lineHeight;
           const eh = Math.max(badgeW, textH);
-          if (testY + eh > startY + maxColumnHeight) break;
+          // Check fit without trailing padding on this (potentially last) item
+          if (testY + eh > maxColumnHeight) break;
           visibleHotels.push(sh);
+          entryHeights.push(eh);
           testY += eh + entryPadding;
         }
 
         visibleHotels.forEach((sh, idx) => {
           const hotel = hotels.find((h) => h.id === sh.hotelId)!;
+          const eh = entryHeights[idx];
 
           pdf.setFontSize(fontSize);
           pdf.setFont('helvetica', 'normal');
           const nameLines: string[] = pdf.splitTextToSize(hotel.name, maxTextW);
           const addrLines: string[] = pdf.splitTextToSize(hotel.address, maxTextW);
-          const distLines: string[] = pdf.splitTextToSize(`${hotel.distanceFromACC} mi from ACC`, maxTextW);
+          const distLines: string[] = pdf.splitTextToSize(
+            `${hotel.distanceFromACC} mi from ACC`,
+            maxTextW
+          );
           const totalLines = nameLines.length + addrLines.length + distLines.length;
           const textH = totalLines * lineHeight;
-          const eh = Math.max(badgeW, textH);
 
           // ── Tall rounded-rectangle badge spanning full entry height ──────────
           const badgeRadius = 3;
