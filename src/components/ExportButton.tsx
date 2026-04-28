@@ -102,7 +102,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const listStartY = MARGIN_PT + headerHeight;
       const maxColumnHeight = legendMaxBottom - listStartY - 4;
 
-      // ── Column text widths (badge is badgeW wide) ─────────────────────────
+      // ── Sizing constants ───────────────────────────────────────────────────────
       const badgeW = 16;
       const badgeToTextGap = 6;
       const colGap = 14;
@@ -113,7 +113,6 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const twoColTextWidth = twoColEachWidth - badgeW - badgeToTextGap;
 
       // ── Auto-scale font to fit all hotels in available column height ─────────
-      // Start at 10pt and step down to 6pt minimum until everything fits.
       const colHotels1 = useTwoColumns ? sortedHotels.slice(0, 10) : sortedHotels;
       const colHotels2 = useTwoColumns ? sortedHotels.slice(10) : [];
 
@@ -168,33 +167,46 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       pdf.text('PARTNER HOTELS', listX, currentY + 10);
       currentY += 22;
 
-      // ── Draw one column ───────────────────────────────────────────────────────
+      // ── Draw one column with per-entry separators ───────────────────────────
       const drawColumn = (
         columnHotels: SelectedHotel[],
         colStartX: number,
         startY: number,
-        maxTextW: number
+        maxTextW: number,
+        colWidth: number
       ) => {
         let y = startY;
         const textX = colStartX + badgeW + badgeToTextGap;
 
+        // Pre-filter to only hotels that will actually fit, so we know the last one
+        const visibleHotels: SelectedHotel[] = [];
+        let testY = startY;
         for (const sh of columnHotels) {
           const hotel = hotels.find((h) => h.id === sh.hotelId);
           if (!hotel) continue;
+          pdf.setFontSize(fontSize);
+          const nameLines: string[] = pdf.splitTextToSize(hotel.name, maxTextW);
+          const addrLines: string[] = pdf.splitTextToSize(hotel.address, maxTextW);
+          const distLines: string[] = pdf.splitTextToSize(`${hotel.distanceFromACC} mi from ACC`, maxTextW);
+          const totalLines = nameLines.length + addrLines.length + distLines.length;
+          const textH = totalLines * lineHeight;
+          const eh = Math.max(badgeW, textH);
+          if (testY + eh > startY + maxColumnHeight) break;
+          visibleHotels.push(sh);
+          testY += eh + entryPadding;
+        }
+
+        visibleHotels.forEach((sh, idx) => {
+          const hotel = hotels.find((h) => h.id === sh.hotelId)!;
 
           pdf.setFontSize(fontSize);
           pdf.setFont('helvetica', 'normal');
           const nameLines: string[] = pdf.splitTextToSize(hotel.name, maxTextW);
           const addrLines: string[] = pdf.splitTextToSize(hotel.address, maxTextW);
-          const distLines: string[] = pdf.splitTextToSize(
-            `${hotel.distanceFromACC} mi from ACC`,
-            maxTextW
-          );
+          const distLines: string[] = pdf.splitTextToSize(`${hotel.distanceFromACC} mi from ACC`, maxTextW);
           const totalLines = nameLines.length + addrLines.length + distLines.length;
           const textH = totalLines * lineHeight;
           const eh = Math.max(badgeW, textH);
-
-          if (y + eh > startY + maxColumnHeight) break;
 
           // ── Tall rounded-rectangle badge spanning full entry height ──────────
           const badgeRadius = 3;
@@ -226,7 +238,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
             pdf.text(line, textX, textStartY + (nameLines.length + i) * lineHeight);
           });
 
-          // Distance from ACC – #2196f3
+          // Distance from ACC – blue
           pdf.setTextColor(33, 150, 243);
           distLines.forEach((line: string, i: number) => {
             pdf.text(
@@ -237,16 +249,30 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
           });
 
           y += eh + entryPadding;
-        }
+
+          // ── Light grey horizontal separator after each entry except the last ──
+          if (idx < visibleHotels.length - 1) {
+            const sepY = y - entryPadding / 2;
+            pdf.setDrawColor(210, 210, 210);
+            pdf.setLineWidth(0.4);
+            pdf.line(colStartX, sepY, colStartX + colWidth, sepY);
+          }
+        });
       };
 
       if (useTwoColumns) {
         const col1X = listX;
         const col2X = listX + twoColEachWidth + colGap;
-        drawColumn(colHotels1, col1X, currentY, twoColTextWidth);
-        drawColumn(colHotels2, col2X, currentY, twoColTextWidth);
+        drawColumn(colHotels1, col1X, currentY, twoColTextWidth, twoColEachWidth);
+        drawColumn(colHotels2, col2X, currentY, twoColTextWidth, twoColEachWidth);
+
+        // ── Vertical separator between the two columns ─────────────────────────
+        const vertSepX = listX + twoColEachWidth + colGap / 2;
+        pdf.setDrawColor(210, 210, 210);
+        pdf.setLineWidth(0.4);
+        pdf.line(vertSepX, currentY, vertSepX, legendMaxBottom);
       } else {
-        drawColumn(colHotels1, listX, currentY, singleColTextWidth);
+        drawColumn(colHotels1, listX, currentY, singleColTextWidth, legendAreaWidth);
       }
 
       // ── Draw map ──────────────────────────────────────────────────────────────
