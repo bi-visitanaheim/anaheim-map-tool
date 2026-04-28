@@ -53,7 +53,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const circleRadius = 7;
       const circleDiameter = circleRadius * 2;
       const circleToTextGap = 8;
-      const colGap = 14;        // gap between the two legend columns
+      const colGap = 14;
       const fontSize = 10;
       const lineHeight = fontSize * 1.3;
       const entryPadding = 5;
@@ -71,16 +71,13 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         logoHeight = logoMaxHeight;
         logoWidth = logoMaxHeight * logoAspect;
       }
-      // Header height = logo + spacing + "PARTNER HOTELS" title row
       const headerHeight = logoHeight + 12 + 22;
 
-      // ── Legend area width ────────────────────────────────────────────────────
-      // Single column → 320 pt wide (wider = less wrapping)
-      // Two columns   → 340 pt wide total, split evenly
+      // ── Legend area width ───────────────────────────────────────────────────
       const legendAreaWidth = useTwoColumns ? 340 : 320;
       const gapWidth = 12;
 
-      // ── Map geometry (compute BEFORE legend height cap) ──────────────────────
+      // ── Map geometry ────────────────────────────────────────────────────────
       const availableMapWidth = contentWidth - legendAreaWidth - gapWidth;
       const availableMapHeight = contentHeight;
 
@@ -106,11 +103,10 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         mapOffsetX = (availableMapWidth - finalMapWidth) / 2;
       }
 
-      // ── Legend height is capped to the actual rendered map height ────────────
-      // This guarantees the last hotel row never goes below the bottom of the map.
+      // ── Cap legend height to map bottom ─────────────────────────────────────
       const legendMaxBottom = MARGIN_PT + mapOffsetY + finalMapHeight;
       const listStartY = MARGIN_PT + headerHeight;
-      const maxColumnHeight = legendMaxBottom - listStartY - 4; // 4 pt breathing room
+      const maxColumnHeight = legendMaxBottom - listStartY - 4;
 
       // ── Column text widths ───────────────────────────────────────────────────
       const singleColTextWidth = legendAreaWidth - circleDiameter - circleToTextGap;
@@ -128,13 +124,13 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       pdf.setFontSize(11);
       pdf.setTextColor(137, 204, 226);
       pdf.text('PARTNER HOTELS', listX, currentY + 10);
-      currentY += 22; // now currentY === listStartY
+      currentY += 22;
 
       // ── Split hotels into columns ────────────────────────────────────────────
       const col1Hotels = useTwoColumns ? sortedHotels.slice(0, 10) : sortedHotels;
       const col2Hotels = useTwoColumns ? sortedHotels.slice(10) : [];
 
-      // ── Draw one column, stopping if an entry would exceed maxColumnHeight ───
+      // ── Draw one column ───────────────────────────────────────────────────────────
       const drawColumn = (
         columnHotels: SelectedHotel[],
         colStartX: number,
@@ -160,15 +156,14 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
           const textH = totalLines * lineHeight;
           const eh = Math.max(circleDiameter, textH);
 
-          // Stop drawing if this entry would go past the map's bottom edge
           if (y + eh > startY + maxColumnHeight) break;
 
-          // Circle – vertically centred with the text block
+          // Circle
           const circleY = y + eh / 2;
           pdf.setFillColor(0, 65, 131);
           pdf.circle(colStartX + circleRadius, circleY, circleRadius, 'F');
 
-          // Number in circle – same font size as body text
+          // Number in circle
           pdf.setTextColor(255, 255, 255);
           pdf.setFont('helvetica', 'bold');
           pdf.setFontSize(fontSize);
@@ -176,9 +171,9 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
           const numW = pdf.getTextWidth(numStr);
           pdf.text(numStr, colStartX + circleRadius - numW / 2, circleY + fontSize * 0.35);
 
-          // Text block – vertically centred
           const textStartY = y + (eh - textH) / 2 + lineHeight * 0.8;
 
+          // Hotel name – dark navy
           pdf.setTextColor(26, 58, 74);
           pdf.setFont('helvetica', 'normal');
           pdf.setFontSize(fontSize);
@@ -186,12 +181,14 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
             pdf.text(line, textX, textStartY + i * lineHeight);
           });
 
+          // Address – amber/gold
           pdf.setTextColor(250, 162, 27);
           addrLines.forEach((line: string, i: number) => {
             pdf.text(line, textX, textStartY + (nameLines.length + i) * lineHeight);
           });
 
-          pdf.setTextColor(120, 120, 120);
+          // Distance from ACC – navy blue
+          pdf.setTextColor(0, 41, 83);
           distLines.forEach((line: string, i: number) => {
             pdf.text(
               line,
@@ -219,7 +216,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
 
       pdf.addImage(mapImage.src, 'JPEG', mapX, mapY, finalMapWidth, finalMapHeight, undefined, 'FAST');
 
-      // ── Redraw markers on map ─────────────────────────────────────────────────
+      // ── Redraw markers ───────────────────────────────────────────────────────────
       const markerRadius = 8;
       sortedHotels.forEach((sh) => {
         if (!sh.position) return;
