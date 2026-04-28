@@ -118,26 +118,6 @@ const Index = () => {
           />
         </main>
       </div>
-
-      {/* Instructions Footer */}
-      <footer className="border-t border-border bg-card px-6 py-3">
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <div className="flex items-center gap-6">
-            <span>
-              <strong className="text-foreground">1.</strong> Click hotels to select (max 20)
-            </span>
-            <span>
-              <strong className="text-foreground">2.</strong> Drag markers to position on map
-            </span>
-            <span>
-              <strong className="text-foreground">3.</strong> Export as high-quality PDF
-            </span>
-          </div>
-          <span className="text-xs italic">
-            Marker positions are saved automatically | Source: Hotel names and addresses are updated via Simpleview.
-          </span>
-        </div>
-      </footer>
     </div>
   );
 };
