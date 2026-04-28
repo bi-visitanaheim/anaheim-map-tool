@@ -73,11 +73,11 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       }
       const headerHeight = logoHeight + 12 + 22;
 
-      // ── Legend area width ───────────────────────────────────────────────────
+      // ── Legend area width ────────────────────────────────────────────────────
       const legendAreaWidth = useTwoColumns ? 340 : 320;
       const gapWidth = 12;
 
-      // ── Map geometry ────────────────────────────────────────────────────────
+      // ── Map geometry ─────────────────────────────────────────────────────────
       const availableMapWidth = contentWidth - legendAreaWidth - gapWidth;
       const availableMapHeight = contentHeight;
 
@@ -103,7 +103,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         mapOffsetX = (availableMapWidth - finalMapWidth) / 2;
       }
 
-      // ── Cap legend height to map bottom ─────────────────────────────────────
+      // ── Cap legend height to map bottom ──────────────────────────────────────
       const legendMaxBottom = MARGIN_PT + mapOffsetY + finalMapHeight;
       const listStartY = MARGIN_PT + headerHeight;
       const maxColumnHeight = legendMaxBottom - listStartY - 4;
@@ -126,11 +126,11 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       pdf.text('PARTNER HOTELS', listX, currentY + 10);
       currentY += 22;
 
-      // ── Split hotels into columns ────────────────────────────────────────────
+      // ── Split hotels into columns ─────────────────────────────────────────────
       const col1Hotels = useTwoColumns ? sortedHotels.slice(0, 10) : sortedHotels;
       const col2Hotels = useTwoColumns ? sortedHotels.slice(10) : [];
 
-      // ── Draw one column ───────────────────────────────────────────────────────────
+      // ── Draw one column ───────────────────────────────────────────────────────
       const drawColumn = (
         columnHotels: SelectedHotel[],
         colStartX: number,
@@ -187,8 +187,8 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
             pdf.text(line, textX, textStartY + (nameLines.length + i) * lineHeight);
           });
 
-          // Distance from ACC – navy blue
-          pdf.setTextColor(0, 41, 83);
+          // Distance from ACC – #2196f3 (33, 150, 243)
+          pdf.setTextColor(33, 150, 243);
           distLines.forEach((line: string, i: number) => {
             pdf.text(
               line,
@@ -210,13 +210,13 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         drawColumn(col1Hotels, listX, currentY, singleColTextWidth);
       }
 
-      // ── Draw map ─────────────────────────────────────────────────────────────
+      // ── Draw map ──────────────────────────────────────────────────────────────
       const mapX = MARGIN_PT + legendAreaWidth + gapWidth + mapOffsetX;
       const mapY = MARGIN_PT + mapOffsetY;
 
       pdf.addImage(mapImage.src, 'JPEG', mapX, mapY, finalMapWidth, finalMapHeight, undefined, 'FAST');
 
-      // ── Redraw markers ───────────────────────────────────────────────────────────
+      // ── Redraw markers ────────────────────────────────────────────────────────
       const markerRadius = 8;
       sortedHotels.forEach((sh) => {
         if (!sh.position) return;
