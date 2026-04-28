@@ -5,10 +5,9 @@ import { SelectedHotel } from '@/hooks/useMarkerPositions';
 interface MapCanvasProps {
   selectedHotels: SelectedHotel[];
   onUpdatePosition: (hotelId: string, x: number, y: number) => void;
-  readOnly?: boolean;
 }
 
-export function MapCanvas({ selectedHotels, onUpdatePosition, readOnly = false }: MapCanvasProps) {
+export function MapCanvas({ selectedHotels, onUpdatePosition }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
@@ -35,7 +34,6 @@ export function MapCanvas({ selectedHotels, onUpdatePosition, readOnly = false }
             onPositionChange={(x, y) => onUpdatePosition(sh.hotelId, x, y)}
             containerRef={containerRef}
             imageRef={imageRef}
-            readOnly={readOnly}
           />
         )
       ))}
