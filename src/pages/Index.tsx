@@ -20,6 +20,7 @@ const Index = () => {
   } = useMarkerPositions();
 
   const selectedHotelIds = selectedHotels.map(h => h.hotelId);
+  const [locked, setLocked] = useState(false);
 
   // Panel resize state
   const [panelWidth, setPanelWidth] = useState(() => {
@@ -29,7 +30,6 @@ const Index = () => {
   const [isResizing, setIsResizing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Save panel width to localStorage
   useEffect(() => {
     localStorage.setItem('hotelPanelWidth', panelWidth.toString());
   }, [panelWidth]);
@@ -65,7 +65,6 @@ const Index = () => {
     };
   }, [isResizing]);
 
-  // Show a brief loading screen while IndexedDB restores saved state
   if (!isLoaded) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -82,10 +81,11 @@ const Index = () => {
       <Header
         selectedHotels={selectedHotels}
         onClearAll={clearAllSelections}
+        locked={locked}
+        onToggleLock={() => setLocked(l => !l)}
       />
 
       <div ref={containerRef} className="flex flex-1 overflow-hidden">
-        {/* Hotel List Panel — Resizable */}
         <aside
           className="flex-shrink-0 border-r border-border overflow-hidden"
           style={{ width: panelWidth }}
@@ -98,7 +98,6 @@ const Index = () => {
           />
         </aside>
 
-        {/* Resize Handle */}
         <div
           onMouseDown={handleMouseDown}
           className={`
@@ -110,11 +109,11 @@ const Index = () => {
           title="Drag to resize panel"
         />
 
-        {/* Map Area */}
         <main className="flex-1 overflow-hidden p-4">
           <MapCanvas
             selectedHotels={selectedHotels}
             onUpdatePosition={updateMarkerPosition}
+            locked={locked}
           />
         </main>
       </div>
