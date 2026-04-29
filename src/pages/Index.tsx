@@ -20,9 +20,7 @@ const Index = () => {
   } = useMarkerPositions();
 
   const selectedHotelIds = selectedHotels.map(h => h.hotelId);
-  const [locked, setLocked] = useState(false);
 
-  // Panel resize state
   const [panelWidth, setPanelWidth] = useState(() => {
     const saved = localStorage.getItem('hotelPanelWidth');
     return saved ? Math.min(Math.max(parseInt(saved, 10), MIN_PANEL_WIDTH), MAX_PANEL_WIDTH) : DEFAULT_PANEL_WIDTH;
@@ -41,22 +39,17 @@ const Index = () => {
 
   useEffect(() => {
     if (!isResizing) return;
-
     const handleMouseMove = (e: MouseEvent) => {
       if (!containerRef.current) return;
       const containerRect = containerRef.current.getBoundingClientRect();
       const newWidth = e.clientX - containerRect.left;
-      const clampedWidth = Math.min(Math.max(newWidth, MIN_PANEL_WIDTH), MAX_PANEL_WIDTH);
-      setPanelWidth(clampedWidth);
+      setPanelWidth(Math.min(Math.max(newWidth, MIN_PANEL_WIDTH), MAX_PANEL_WIDTH));
     };
-
     const handleMouseUp = () => setIsResizing(false);
-
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
-
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
@@ -81,8 +74,6 @@ const Index = () => {
       <Header
         selectedHotels={selectedHotels}
         onClearAll={clearAllSelections}
-        locked={locked}
-        onToggleLock={() => setLocked(l => !l)}
       />
 
       <div ref={containerRef} className="flex flex-1 overflow-hidden">
@@ -100,12 +91,7 @@ const Index = () => {
 
         <div
           onMouseDown={handleMouseDown}
-          className={`
-            w-1 flex-shrink-0 cursor-col-resize bg-border
-            transition-colors duration-150
-            hover:bg-primary/50 active:bg-primary
-            ${isResizing ? 'bg-primary' : ''}
-          `}
+          className={`w-1 flex-shrink-0 cursor-col-resize bg-border transition-colors duration-150 hover:bg-primary/50 active:bg-primary ${isResizing ? 'bg-primary' : ''}`}
           title="Drag to resize panel"
         />
 
@@ -113,7 +99,6 @@ const Index = () => {
           <MapCanvas
             selectedHotels={selectedHotels}
             onUpdatePosition={updateMarkerPosition}
-            locked={locked}
           />
         </main>
       </div>

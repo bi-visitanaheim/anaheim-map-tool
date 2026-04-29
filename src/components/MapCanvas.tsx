@@ -5,10 +5,9 @@ import { SelectedHotel, MarkerPosition } from '@/hooks/useMarkerPositions';
 interface MapCanvasProps {
   selectedHotels: SelectedHotel[];
   onUpdatePosition: (hotelId: string, position: MarkerPosition) => void;
-  locked?: boolean;
 }
 
-export function MapCanvas({ selectedHotels, onUpdatePosition, locked = false }: MapCanvasProps) {
+export function MapCanvas({ selectedHotels }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -23,10 +22,6 @@ export function MapCanvas({ selectedHotels, onUpdatePosition, locked = false }: 
     };
     img.src = '/images/map-template.jpg';
   }, []);
-
-  const handlePositionChange = (hotelId: string, percentX: number, percentY: number) => {
-    onUpdatePosition(hotelId, { x: percentX, y: percentY });
-  };
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-lg bg-anaheim-peach shadow-soft">
@@ -60,19 +55,15 @@ export function MapCanvas({ selectedHotels, onUpdatePosition, locked = false }: 
             />
 
             {mapLoaded && selectedHotels.map((hotel) => {
-              const percentX = hotel.position?.x ?? 50;
-              const percentY = hotel.position?.y ?? 50;
-
+              if (!hotel.position) return null;
               return (
                 <DraggableMarker
                   key={hotel.hotelId}
                   number={hotel.number}
-                  percentX={percentX}
-                  percentY={percentY}
-                  onPositionChange={(x, y) => handlePositionChange(hotel.hotelId, x, y)}
+                  percentX={hotel.position.x}
+                  percentY={hotel.position.y}
                   containerRef={containerRef}
                   imageRef={imageRef}
-                  locked={locked}
                 />
               );
             })}
