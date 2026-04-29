@@ -21,6 +21,17 @@ export interface SelectedHotel {
   position: MarkerPosition | null;
 }
 
+// Staggered default positions so new markers don't pile up on each other
+const DEFAULT_POSITIONS: MarkerPosition[] = [
+  { x: 45, y: 45 }, { x: 50, y: 45 }, { x: 55, y: 45 },
+  { x: 45, y: 50 }, { x: 50, y: 50 }, { x: 55, y: 50 },
+  { x: 45, y: 55 }, { x: 50, y: 55 }, { x: 55, y: 55 },
+  { x: 40, y: 45 }, { x: 60, y: 45 }, { x: 40, y: 50 },
+  { x: 60, y: 50 }, { x: 40, y: 55 }, { x: 60, y: 55 },
+  { x: 45, y: 40 }, { x: 50, y: 40 }, { x: 55, y: 40 },
+  { x: 45, y: 60 }, { x: 50, y: 60 },
+];
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useMarkerPositions() {
@@ -36,7 +47,8 @@ export function useMarkerPositions() {
       try {
         const { data, error } = await supabase
           .from('marker_positions')
-          .select('hotel_id, x, y');
+          .select('hotel_id, x, y, number')
+          .order('number', { ascending: true });
 
         if (error) throw error;
         if (cancelled) return;
@@ -48,15 +60,11 @@ export function useMarkerPositions() {
 
         setSavedPositions(posMap);
 
-        // Rebuild selectedHotels from positions that exist in DB
-        // (positions are the source of truth — hotels with a position are "selected")
-        const hydrated: SelectedHotel[] = Object.entries(posMap)
-          .map(([hotelId, pos], idx) => ({
-            hotelId,
-            number: idx + 1,
-            position: pos,
-          }))
-          .sort((a, b) => a.number - b.number);
+        const hydrated: SelectedHotel[] = (data ?? []).map((row) => ({
+          hotelId: row.hotel_id,
+          number: row.number,
+          position: { x: row.x, y: row.y },
+        }));
 
         setSelectedHotels(hydrated);
       } catch (err) {
@@ -77,8 +85,22 @@ export function useMarkerPositions() {
         if (prev.length >= 20) return prev;
 
         const newNumber = prev.length + 1;
-        const savedPos = savedPositions[hotelId] ?? null;
-        return [...prev, { hotelId, number: newNumber, position: savedPos }];
+        // Use saved position if it exists, otherwise pick a staggered default
+        const savedPos = savedPositions[hotelId] ?? DEFAULT_POSITIONS[(newNumber - 1) % DEFAULT_POSITIONS.length];
+        const newEntry: SelectedHotel = { hotelId, number: newNumber, position: savedPos };
+
+        // Immediately persist to Supabase (fire and forget)
+        supabase
+          .from('marker_positions')
+          .upsert(
+            { hotel_id: hotelId, x: savedPos.x, y: savedPos.y, number: newNumber },
+            { onConflict: 'hotel_id' }
+          )
+          .then(({ error }) => {
+            if (error) console.error('[useMarkerPositions] Failed to persist selection:', error);
+          });
+
+        return [...prev, newEntry];
       });
     },
     [savedPositions]
@@ -86,7 +108,6 @@ export function useMarkerPositions() {
 
   // ── Deselect a hotel ─────────────────────────────────────────────────────────
   const deselectHotel = useCallback(async (hotelId: string) => {
-    // Remove from Supabase
     await supabase.from('marker_positions').delete().eq('hotel_id', hotelId);
 
     setSavedPositions((prev) => {
@@ -97,17 +118,34 @@ export function useMarkerPositions() {
 
     setSelectedHotels((prev) => {
       const filtered = prev.filter((h) => h.hotelId !== hotelId);
-      return filtered.map((hotel, index) => ({ ...hotel, number: index + 1 }));
+      const renumbered = filtered.map((hotel, index) => ({ ...hotel, number: index + 1 }));
+
+      // Re-persist updated numbers
+      renumbered.forEach(({ hotelId: hid, number, position }) => {
+        if (!position) return;
+        supabase
+          .from('marker_positions')
+          .upsert({ hotel_id: hid, x: position.x, y: position.y, number }, { onConflict: 'hotel_id' })
+          .then(({ error }) => {
+            if (error) console.error('[useMarkerPositions] Failed to renumber:', error);
+          });
+      });
+
+      return renumbered;
     });
   }, []);
 
   // ── Update a marker's position ───────────────────────────────────────────────
   const updateMarkerPosition = useCallback(
     async (hotelId: string, position: MarkerPosition) => {
-      // Upsert to Supabase
+      const number = selectedHotels.find((h) => h.hotelId === hotelId)?.number ?? 1;
+
       const { error } = await supabase
         .from('marker_positions')
-        .upsert({ hotel_id: hotelId, x: position.x, y: position.y }, { onConflict: 'hotel_id' });
+        .upsert(
+          { hotel_id: hotelId, x: position.x, y: position.y, number },
+          { onConflict: 'hotel_id' }
+        );
 
       if (error) {
         console.error('[useMarkerPositions] Failed to upsert position:', error);
@@ -122,7 +160,7 @@ export function useMarkerPositions() {
 
       setSavedPositions((prev) => ({ ...prev, [hotelId]: position }));
     },
-    []
+    [selectedHotels]
   );
 
   // ── Clear everything ──────────────────────────────────────────────────────────
