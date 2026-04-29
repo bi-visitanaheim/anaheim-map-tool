@@ -5,7 +5,7 @@
  * share the same state in real time.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -38,6 +38,10 @@ export function useMarkerPositions() {
   const [selectedHotels, setSelectedHotels] = useState<SelectedHotel[]>([]);
   const [savedPositions, setSavedPositions] = useState<Record<string, MarkerPosition>>({});
   const [isLoaded, setIsLoaded] = useState(false);
+
+  // Keep a ref to selectedHotels so async callbacks always see the latest value
+  const selectedHotelsRef = useRef<SelectedHotel[]>([]);
+  useEffect(() => { selectedHotelsRef.current = selectedHotels; }, [selectedHotels]);
 
   // ── Load all positions from Supabase on mount ────────────────────────────────
   useEffect(() => {
@@ -85,11 +89,10 @@ export function useMarkerPositions() {
         if (prev.length >= 20) return prev;
 
         const newNumber = prev.length + 1;
-        // Use saved position if it exists, otherwise pick a staggered default
         const savedPos = savedPositions[hotelId] ?? DEFAULT_POSITIONS[(newNumber - 1) % DEFAULT_POSITIONS.length];
         const newEntry: SelectedHotel = { hotelId, number: newNumber, position: savedPos };
 
-        // Immediately persist to Supabase (fire and forget)
+        // Persist immediately (fire and forget)
         supabase
           .from('marker_positions')
           .upsert(
@@ -135,32 +138,30 @@ export function useMarkerPositions() {
     });
   }, []);
 
-  // ── Update a marker's position ───────────────────────────────────────────────
+  // ── Update a marker's position (optimistic: update UI first, then sync) ───────
   const updateMarkerPosition = useCallback(
-    async (hotelId: string, position: MarkerPosition) => {
-      const number = selectedHotels.find((h) => h.hotelId === hotelId)?.number ?? 1;
-
-      const { error } = await supabase
-        .from('marker_positions')
-        .upsert(
-          { hotel_id: hotelId, x: position.x, y: position.y, number },
-          { onConflict: 'hotel_id' }
-        );
-
-      if (error) {
-        console.error('[useMarkerPositions] Failed to upsert position:', error);
-        return;
-      }
-
+    (hotelId: string, position: MarkerPosition) => {
+      // 1. Update local state immediately so the marker stays where dropped
       setSelectedHotels((prev) =>
         prev.map((hotel) =>
           hotel.hotelId === hotelId ? { ...hotel, position } : hotel
         )
       );
-
       setSavedPositions((prev) => ({ ...prev, [hotelId]: position }));
+
+      // 2. Sync to Supabase in the background
+      const number = selectedHotelsRef.current.find((h) => h.hotelId === hotelId)?.number ?? 1;
+      supabase
+        .from('marker_positions')
+        .upsert(
+          { hotel_id: hotelId, x: position.x, y: position.y, number },
+          { onConflict: 'hotel_id' }
+        )
+        .then(({ error }) => {
+          if (error) console.error('[useMarkerPositions] Failed to sync position:', error);
+        });
     },
-    [selectedHotels]
+    []
   );
 
   // ── Clear everything ──────────────────────────────────────────────────────────
