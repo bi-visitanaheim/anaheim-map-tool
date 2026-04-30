@@ -103,7 +103,7 @@ export function HotelListPanel({
                   {/* Hotel Info */}
                   <div className="min-w-0 flex-1">
                     <h3 className={cn(
-                      "truncate text-sm font-semibold leading-tight",
+                      "break-words text-sm font-semibold leading-tight",
                       isSelected ? "text-foreground" : "text-foreground/80"
                     )}>
                       {hotel.name}
