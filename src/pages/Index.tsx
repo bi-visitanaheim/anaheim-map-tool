@@ -13,7 +13,6 @@ const Index = () => {
     selectedHotels,
     selectHotel,
     deselectHotel,
-    updateMarkerPosition,
     clearAllSelections,
     getHotelNumber,
     isLoaded,
@@ -98,7 +97,6 @@ const Index = () => {
         <main className="flex-1 overflow-hidden p-4">
           <MapCanvas
             selectedHotels={selectedHotels}
-            onUpdatePosition={updateMarkerPosition}
           />
         </main>
       </div>

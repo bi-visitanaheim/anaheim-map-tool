@@ -1,10 +1,9 @@
 import { useRef, useState, useEffect } from 'react';
 import { DraggableMarker } from './DraggableMarker';
-import { SelectedHotel, MarkerPosition } from '@/hooks/useMarkerPositions';
+import { SelectedHotel } from '@/hooks/useMarkerPositions';
 
 interface MapCanvasProps {
   selectedHotels: SelectedHotel[];
-  onUpdatePosition: (hotelId: string, position: MarkerPosition) => void;
 }
 
 export function MapCanvas({ selectedHotels }: MapCanvasProps) {

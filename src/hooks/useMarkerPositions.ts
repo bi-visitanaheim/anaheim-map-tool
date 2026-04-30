@@ -1,8 +1,9 @@
 /**
  * useMarkerPositions.ts
  *
- * Stores hotel selections and marker positions in Supabase so all users
- * share the same state in real time.
+ * Hotel selections live in Supabase table `selected_hotels`.
+ * Canonical x,y positions live in Supabase table `hotel_positions` and are
+ * loaded once on mount into a ref — they are immutable at runtime.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -21,59 +22,46 @@ export interface SelectedHotel {
   position: MarkerPosition | null;
 }
 
-// Staggered default positions so new markers don't pile up on each other
-const DEFAULT_POSITIONS: MarkerPosition[] = [
-  { x: 45, y: 45 }, { x: 50, y: 45 }, { x: 55, y: 45 },
-  { x: 45, y: 50 }, { x: 50, y: 50 }, { x: 55, y: 50 },
-  { x: 45, y: 55 }, { x: 50, y: 55 }, { x: 55, y: 55 },
-  { x: 40, y: 45 }, { x: 60, y: 45 }, { x: 40, y: 50 },
-  { x: 60, y: 50 }, { x: 40, y: 55 }, { x: 60, y: 55 },
-  { x: 45, y: 40 }, { x: 50, y: 40 }, { x: 55, y: 40 },
-  { x: 45, y: 60 }, { x: 50, y: 60 },
-];
-
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useMarkerPositions() {
   const [selectedHotels, setSelectedHotels] = useState<SelectedHotel[]>([]);
-  const [savedPositions, setSavedPositions] = useState<Record<string, MarkerPosition>>({});
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Persists dragged positions across Clear All so re-selecting restores them.
-  // Updated on every drag — never overwritten by clearAllSelections.
-  const positionMemoryRef = useRef<Record<string, MarkerPosition>>({});
+  // Permanent locked map of canonical hotel positions, loaded once on mount.
+  const canonicalPositions = useRef<Record<string, MarkerPosition>>({});
 
-  // Always-current ref to selectedHotels for use inside async callbacks
-  const selectedHotelsRef = useRef<SelectedHotel[]>([]);
-  useEffect(() => { selectedHotelsRef.current = selectedHotels; }, [selectedHotels]);
-
-  // ── Load all positions from Supabase on mount ────────────────────────────────
+  // ── Load canonical positions, then hydrate active selections ────────────────
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        const { data, error } = await supabase
-          .from('marker_positions')
-          .select('hotel_id, x, y, number')
-          .order('number', { ascending: true });
+        const { data: posData, error: posError } = await supabase
+          .from('hotel_positions')
+          .select('hotel_id, x, y');
 
-        if (error) throw error;
+        if (posError) throw posError;
         if (cancelled) return;
 
         const posMap: Record<string, MarkerPosition> = {};
-        for (const row of data ?? []) {
+        for (const row of posData ?? []) {
           posMap[row.hotel_id] = { x: row.x, y: row.y };
         }
+        canonicalPositions.current = posMap;
 
-        setSavedPositions(posMap);
-        // Seed memory with whatever is loaded from DB
-        positionMemoryRef.current = { ...posMap };
+        const { data: selData, error: selError } = await supabase
+          .from('selected_hotels')
+          .select('hotel_id, number')
+          .order('number', { ascending: true });
 
-        const hydrated: SelectedHotel[] = (data ?? []).map((row) => ({
+        if (selError) throw selError;
+        if (cancelled) return;
+
+        const hydrated: SelectedHotel[] = (selData ?? []).map((row) => ({
           hotelId: row.hotel_id,
           number: row.number,
-          position: { x: row.x, y: row.y },
+          position: posMap[row.hotel_id] ?? null,
         }));
 
         setSelectedHotels(hydrated);
@@ -88,102 +76,66 @@ export function useMarkerPositions() {
   }, []);
 
   // ── Select a hotel ───────────────────────────────────────────────────────────
-  const selectHotel = useCallback(
-    async (hotelId: string) => {
-      setSelectedHotels((prev) => {
-        if (prev.find((h) => h.hotelId === hotelId)) return prev;
-        if (prev.length >= 20) return prev;
+  const selectHotel = useCallback(async (hotelId: string) => {
+    let added: SelectedHotel | null = null;
 
-        const newNumber = prev.length + 1;
-        // Priority: live savedPositions → position memory (survives Clear All) → staggered default
-        const savedPos =
-          savedPositions[hotelId] ??
-          positionMemoryRef.current[hotelId] ??
-          DEFAULT_POSITIONS[(newNumber - 1) % DEFAULT_POSITIONS.length];
+    setSelectedHotels((prev) => {
+      if (prev.find((h) => h.hotelId === hotelId)) return prev;
 
-        const newEntry: SelectedHotel = { hotelId, number: newNumber, position: savedPos };
+      const pos = canonicalPositions.current[hotelId];
+      if (!pos) return prev;
 
-        // Persist immediately
-        supabase
-          .from('marker_positions')
-          .upsert(
-            { hotel_id: hotelId, x: savedPos.x, y: savedPos.y, number: newNumber },
-            { onConflict: 'hotel_id' }
-          )
-          .then(({ error }) => {
-            if (error) console.error('[useMarkerPositions] Failed to persist selection:', error);
-          });
+      const newNumber = prev.length + 1;
+      added = { hotelId, number: newNumber, position: pos };
+      return [...prev, added];
+    });
 
-        return [...prev, newEntry];
-      });
-    },
-    [savedPositions]
-  );
+    if (!added) return;
+
+    const { error } = await supabase
+      .from('selected_hotels')
+      .upsert(
+        { hotel_id: added.hotelId, number: added.number },
+        { onConflict: 'hotel_id' }
+      );
+    if (error) console.error('[useMarkerPositions] Failed to persist selection:', error);
+  }, []);
 
   // ── Deselect a hotel ─────────────────────────────────────────────────────────
   const deselectHotel = useCallback(async (hotelId: string) => {
-    await supabase.from('marker_positions').delete().eq('hotel_id', hotelId);
-
-    setSavedPositions((prev) => {
-      const next = { ...prev };
-      delete next[hotelId];
-      return next;
-    });
+    let renumbered: SelectedHotel[] = [];
 
     setSelectedHotels((prev) => {
       const filtered = prev.filter((h) => h.hotelId !== hotelId);
-      const renumbered = filtered.map((hotel, index) => ({ ...hotel, number: index + 1 }));
-
-      renumbered.forEach(({ hotelId: hid, number, position }) => {
-        if (!position) return;
-        supabase
-          .from('marker_positions')
-          .upsert({ hotel_id: hid, x: position.x, y: position.y, number }, { onConflict: 'hotel_id' })
-          .then(({ error }) => {
-            if (error) console.error('[useMarkerPositions] Failed to renumber:', error);
-          });
-      });
-
+      renumbered = filtered.map((hotel, index) => ({ ...hotel, number: index + 1 }));
       return renumbered;
     });
+
+    const { error: delError } = await supabase
+      .from('selected_hotels')
+      .delete()
+      .eq('hotel_id', hotelId);
+    if (delError) console.error('[useMarkerPositions] Failed to delete selection:', delError);
+
+    if (renumbered.length > 0) {
+      const { error: upError } = await supabase
+        .from('selected_hotels')
+        .upsert(
+          renumbered.map(({ hotelId: hid, number }) => ({ hotel_id: hid, number })),
+          { onConflict: 'hotel_id' }
+        );
+      if (upError) console.error('[useMarkerPositions] Failed to renumber:', upError);
+    }
   }, []);
 
-  // ── Update a marker's position (optimistic) ───────────────────────────────────
-  const updateMarkerPosition = useCallback(
-    (hotelId: string, position: MarkerPosition) => {
-      // 1. Update local state immediately so the marker stays where dropped
-      setSelectedHotels((prev) =>
-        prev.map((hotel) =>
-          hotel.hotelId === hotelId ? { ...hotel, position } : hotel
-        )
-      );
-      setSavedPositions((prev) => ({ ...prev, [hotelId]: position }));
-
-      // 2. Always keep memory ref current — this is the source of truth for post-clear restore
-      positionMemoryRef.current[hotelId] = position;
-
-      // 3. Sync to Supabase in background
-      const number = selectedHotelsRef.current.find((h) => h.hotelId === hotelId)?.number ?? 1;
-      supabase
-        .from('marker_positions')
-        .upsert(
-          { hotel_id: hotelId, x: position.x, y: position.y, number },
-          { onConflict: 'hotel_id' }
-        )
-        .then(({ error }) => {
-          if (error) console.error('[useMarkerPositions] Failed to sync position:', error);
-        });
-    },
-    []
-  );
-
-  // ── Clear everything ──────────────────────────────────────────────────────────
+  // ── Clear all selections ─────────────────────────────────────────────────────
   const clearAllSelections = useCallback(async () => {
-    // positionMemoryRef is already current from every drag — do NOT overwrite it here.
-    // Just wipe Supabase and local selection/position state.
-    await supabase.from('marker_positions').delete().neq('hotel_id', '');
     setSelectedHotels([]);
-    setSavedPositions({});
+    const { error } = await supabase
+      .from('selected_hotels')
+      .delete()
+      .neq('hotel_id', '');
+    if (error) console.error('[useMarkerPositions] Failed to clear selections:', error);
   }, []);
 
   // ── Convenience helpers ───────────────────────────────────────────────────────
@@ -201,11 +153,9 @@ export function useMarkerPositions() {
     selectedHotels,
     selectHotel,
     deselectHotel,
-    updateMarkerPosition,
     clearAllSelections,
     isHotelSelected,
     getHotelNumber,
-    savedPositions,
     isLoaded,
   };
 }
