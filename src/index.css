@@ -15,16 +15,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 210 50% 20%;
 
-    --primary: 195 80% 35%;
+    --primary: 183 68% 22%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 22 80% 65%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 181 43% 63%;
+    --secondary-foreground: 183 68% 15%;
 
     --muted: 30 30% 92%;
     --muted-foreground: 210 20% 45%;
 
-    --accent: 22 90% 55%;
+    --accent: 180 42% 45%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
@@ -32,17 +32,19 @@
 
     --border: 30 30% 85%;
     --input: 30 30% 85%;
-    --ring: 195 80% 35%;
+    --ring: 183 68% 22%;
 
     --radius: 0.5rem;
 
     /* Custom colors for Anaheim branding */
-    --anaheim-teal: 195 80% 35%;
-    --anaheim-coral: 22 80% 65%;
+    --anaheim-teal: 183 68% 22%;
+    --anaheim-teal-mid: 180 42% 45%;
+    --anaheim-teal-light: 181 43% 63%;
+    --anaheim-coral: 181 43% 63%;
     --anaheim-peach: 25 60% 92%;
-    --anaheim-orange: 22 90% 55%;
+    --anaheim-orange: 180 42% 45%;
     --anaheim-navy: 210 50% 20%;
-    --anaheim-gold: 35 85% 55%;
+    --anaheim-gold: 183 68% 22%;
 
     /* Marker colors */
     --marker-bg: 210 100% 26%;
@@ -51,7 +53,7 @@
 
     /* Panel colors */
     --panel-bg: 0 0% 100%;
-    --panel-header: 195 80% 35%;
+    --panel-header: 183 68% 22%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -70,19 +72,19 @@
     --card-foreground: 30 50% 97%;
     --popover: 210 50% 15%;
     --popover-foreground: 30 50% 97%;
-    --primary: 195 70% 45%;
+    --primary: 181 43% 40%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 22 70% 55%;
+    --secondary: 181 40% 50%;
     --secondary-foreground: 0 0% 100%;
     --muted: 210 30% 20%;
     --muted-foreground: 30 20% 70%;
-    --accent: 22 80% 50%;
+    --accent: 180 40% 38%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 45%;
     --destructive-foreground: 210 40% 98%;
     --border: 210 30% 25%;
     --input: 210 30% 25%;
-    --ring: 195 70% 45%;
+    --ring: 181 43% 40%;
   }
 }
 
