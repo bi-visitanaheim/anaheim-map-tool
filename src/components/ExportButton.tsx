@@ -158,14 +158,14 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       const titleY = currentY + logoHeight / 2 + titleFontSize * 0.35;
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(titleFontSize);
-      pdf.setTextColor(0, 65, 131);
+      pdf.setTextColor(35, 31, 32);
       pdf.text('Visit Anaheim Hotel Itinerary', titleX, titleY);
 
       currentY += logoHeight + 12;
 
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(11);
-      pdf.setTextColor(137, 204, 226);
+      pdf.setTextColor(67, 163, 163);
       pdf.text('PARTNER HOTELS', listX, currentY + 10);
       currentY += 22;
 
@@ -218,7 +218,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
 
           // ── Tall rounded-rectangle badge spanning full entry height ──────────
           const badgeRadius = 3;
-          pdf.setFillColor(0, 65, 131);
+          pdf.setFillColor(18, 92, 96);
           pdf.roundedRect(colStartX, y, badgeW, eh, badgeRadius, badgeRadius, 'F');
 
           // Number centered in badge
@@ -232,22 +232,22 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
           // Text block vertically centered in the same entry height
           const textStartY = y + (eh - textH) / 2 + lineHeight * 0.8;
 
-          // Hotel name – dark navy
-          pdf.setTextColor(26, 58, 74);
+          // Hotel name – near-black
+          pdf.setTextColor(35, 31, 32);
           pdf.setFont('helvetica', 'normal');
           pdf.setFontSize(fontSize);
           nameLines.forEach((line: string, i: number) => {
             pdf.text(line, textX, textStartY + i * lineHeight);
           });
 
-          // Address – amber/gold
-          pdf.setTextColor(250, 162, 27);
+          // Address – mid teal
+          pdf.setTextColor(67, 163, 163);
           addrLines.forEach((line: string, i: number) => {
             pdf.text(line, textX, textStartY + (nameLines.length + i) * lineHeight);
           });
 
-          // Distance from ACC – blue
-          pdf.setTextColor(33, 150, 243);
+          // Distance from ACC – dark teal
+          pdf.setTextColor(18, 92, 96);
           distLines.forEach((line: string, i: number) => {
             pdf.text(
               line,
@@ -296,7 +296,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         const pdfMarkerX = mapX + (sh.position.x / 100) * finalMapWidth;
         const pdfMarkerY = mapY + (sh.position.y / 100) * finalMapHeight;
 
-        pdf.setFillColor(0, 65, 131);
+        pdf.setFillColor(18, 92, 96);
         pdf.setDrawColor(255, 255, 255);
         pdf.setLineWidth(1.5);
         pdf.circle(pdfMarkerX, pdfMarkerY, markerRadius, 'FD');

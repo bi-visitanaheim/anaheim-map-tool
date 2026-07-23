@@ -6,14 +6,14 @@
 
 @layer base {
   :root {
-    --background: 30 50% 97%;
-    --foreground: 210 50% 20%;
+    --background: 60 37% 96%;
+    --foreground: 345 6% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 210 50% 20%;
+    --card-foreground: 345 6% 13%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 50% 20%;
+    --popover-foreground: 345 6% 13%;
 
     --primary: 183 68% 22%;
     --primary-foreground: 0 0% 100%;
@@ -21,8 +21,8 @@
     --secondary: 181 43% 63%;
     --secondary-foreground: 183 68% 15%;
 
-    --muted: 30 30% 92%;
-    --muted-foreground: 210 20% 45%;
+    --muted: 60 20% 92%;
+    --muted-foreground: 345 5% 45%;
 
     --accent: 180 42% 45%;
     --accent-foreground: 0 0% 100%;
@@ -30,8 +30,8 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 30 30% 85%;
-    --input: 30 30% 85%;
+    --border: 60 15% 85%;
+    --input: 60 15% 85%;
     --ring: 183 68% 22%;
 
     --radius: 0.5rem;
@@ -43,11 +43,11 @@
     --anaheim-coral: 181 43% 63%;
     --anaheim-peach: 25 60% 92%;
     --anaheim-orange: 180 42% 45%;
-    --anaheim-navy: 210 50% 20%;
+    --anaheim-navy: 345 6% 13%;
     --anaheim-gold: 183 68% 22%;
 
     /* Marker colors */
-    --marker-bg: 210 100% 26%;
+    --marker-bg: 183 68% 22%;
     --marker-text: 0 0% 100%;
     --marker-border: 0 0% 100%;
 
@@ -66,12 +66,12 @@
   }
 
   .dark {
-    --background: 210 50% 10%;
-    --foreground: 30 50% 97%;
-    --card: 210 50% 15%;
-    --card-foreground: 30 50% 97%;
-    --popover: 210 50% 15%;
-    --popover-foreground: 30 50% 97%;
+    --background: 345 8% 10%;
+    --foreground: 60 37% 96%;
+    --card: 345 8% 15%;
+    --card-foreground: 60 37% 96%;
+    --popover: 345 8% 15%;
+    --popover-foreground: 60 37% 96%;
     --primary: 181 43% 40%;
     --primary-foreground: 0 0% 100%;
     --secondary: 181 40% 50%;
