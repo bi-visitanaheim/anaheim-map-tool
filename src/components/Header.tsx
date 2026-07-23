@@ -27,7 +27,7 @@ export function Header({ selectedHotels, onClearAll }: HeaderProps) {
           <Button
             variant="outline"
             onClick={onClearAll}
-            className="text-muted-foreground hover:text-destructive hover:border-destructive"
+            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive"
           >
             <Trash2 className="mr-2 h-4 w-4" />
             Clear All ({selectedHotels.length})
