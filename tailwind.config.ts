@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Montserrat', 'sans-serif'],
+        display: ["'Sharp Sans Display No2'", 'Montserrat', 'sans-serif'],
         body: ['Open Sans', 'sans-serif'],
       },
       colors: {
