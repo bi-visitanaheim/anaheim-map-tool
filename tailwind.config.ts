@@ -63,6 +63,8 @@ export default {
         },
         anaheim: {
           teal: "hsl(var(--anaheim-teal))",
+          tealMid: "hsl(var(--anaheim-teal-mid))",
+          tealLight: "hsl(var(--anaheim-teal-light))",
           coral: "hsl(var(--anaheim-coral))",
           peach: "hsl(var(--anaheim-peach))",
           orange: "hsl(var(--anaheim-orange))",
