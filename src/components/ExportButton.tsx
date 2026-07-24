@@ -162,11 +162,21 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       pdf.addImage(logoImg, 'PNG', listX, currentY, logoWidth, logoHeight);
 
       const titleX = listX + logoWidth + logoGap;
-      const titleY = currentY + logoHeight / 2 + titleFontSize * 0.35;
+      const subtitleFontSize = 10;
+      const titleBlockHeight = titleFontSize + 6 + subtitleFontSize;
+      const titleTopY = currentY + (logoHeight - titleBlockHeight) / 2;
+      const titleY = titleTopY + titleFontSize * 0.8;
+      const subtitleY = titleY + subtitleFontSize + 6;
+
       pdf.setFont('SharpSans', 'bold');
       pdf.setFontSize(titleFontSize);
       pdf.setTextColor(35, 31, 32);
-      pdf.text('Visit Anaheim | Custom Hotel Map Tool', titleX, titleY);
+      pdf.text('Visit Anaheim', titleX, titleY);
+
+      pdf.setFont('SharpSans', 'normal');
+      pdf.setFontSize(subtitleFontSize);
+      pdf.setTextColor(67, 163, 163);
+      pdf.text('Custom Hotel Map Tool', titleX, subtitleY);
 
       currentY += logoHeight + 12;
 
