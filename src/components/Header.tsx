@@ -12,15 +12,20 @@ export function Header({ selectedHotels, onClearAll }: HeaderProps) {
   return (
     <header className="flex items-center justify-between border-b border-border bg-card px-6 py-4 shadow-soft">
       <div className="flex items-center gap-4">
-        <div>
+        <div className="flex items-center gap-3">
           <img
             src="/images/palm-mark.png"
             alt="Visit Anaheim"
             className="h-10 w-10"
           />
-          <p className="text-sm font-medium mt-1" style={{ color: '#43A3A3' }}>
-            Custom Hotel Map Tool
-          </p>
+          <div>
+            <h1 className="font-display text-2xl font-bold tracking-tight" style={{ color: '#231F20' }}>
+              Visit Anaheim
+            </h1>
+            <p className="text-sm font-medium" style={{ color: '#43A3A3' }}>
+              Custom Hotel Map Tool
+            </p>
+          </div>
         </div>
       </div>
 
