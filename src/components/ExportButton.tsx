@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import { SelectedHotel } from '@/hooks/useMarkerPositions';
 import { hotels } from '@/data/hotels';
+import { SHARP_SANS_600_BASE64, SHARP_SANS_700_BASE64 } from '@/lib/pdfFonts';
 
 interface ExportButtonProps {
   selectedHotels: SelectedHotel[];
@@ -42,6 +43,12 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         unit: 'pt',
         format: 'letter',
       });
+
+      // Embed Sharp Sans Display No.2 so the exported PDF matches the on-screen brand font
+      pdf.addFileToVFS('SharpSans-600.ttf', SHARP_SANS_600_BASE64);
+      pdf.addFont('SharpSans-600.ttf', 'SharpSans', 'normal');
+      pdf.addFileToVFS('SharpSans-700.ttf', SHARP_SANS_700_BASE64);
+      pdf.addFont('SharpSans-700.ttf', 'SharpSans', 'bold');
 
       const contentWidth = PAGE_WIDTH_PT - MARGIN_PT * 2;
       const contentHeight = PAGE_HEIGHT_PT - MARGIN_PT * 2;
@@ -156,14 +163,14 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
 
       const titleX = listX + logoWidth + logoGap;
       const titleY = currentY + logoHeight / 2 + titleFontSize * 0.35;
-      pdf.setFont('helvetica', 'bold');
+      pdf.setFont('SharpSans', 'bold');
       pdf.setFontSize(titleFontSize);
       pdf.setTextColor(35, 31, 32);
-      pdf.text('Visit Anaheim Hotel Itinerary', titleX, titleY);
+      pdf.text('Visit Anaheim | Custom Hotel Map Tool', titleX, titleY);
 
       currentY += logoHeight + 12;
 
-      pdf.setFont('helvetica', 'bold');
+      pdf.setFont('SharpSans', 'bold');
       pdf.setFontSize(11);
       pdf.setTextColor(67, 163, 163);
       pdf.text('PARTNER HOTELS', listX, currentY + 10);
@@ -206,7 +213,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
           const eh = entryHeights[idx];
 
           pdf.setFontSize(fontSize);
-          pdf.setFont('helvetica', 'normal');
+          pdf.setFont('SharpSans', 'normal');
           const nameLines: string[] = pdf.splitTextToSize(hotel.name, maxTextW);
           const addrLines: string[] = pdf.splitTextToSize(hotel.address, maxTextW);
           const distLines: string[] = pdf.splitTextToSize(
@@ -223,7 +230,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
 
           // Number centered in badge
           pdf.setTextColor(255, 255, 255);
-          pdf.setFont('helvetica', 'bold');
+          pdf.setFont('SharpSans', 'bold');
           pdf.setFontSize(fontSize);
           const numStr = sh.number.toString();
           const numW = pdf.getTextWidth(numStr);
@@ -234,7 +241,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
 
           // Hotel name – near-black
           pdf.setTextColor(35, 31, 32);
-          pdf.setFont('helvetica', 'normal');
+          pdf.setFont('SharpSans', 'normal');
           pdf.setFontSize(fontSize);
           nameLines.forEach((line: string, i: number) => {
             pdf.text(line, textX, textStartY + i * lineHeight);
@@ -302,7 +309,7 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
         pdf.circle(pdfMarkerX, pdfMarkerY, markerRadius, 'FD');
 
         pdf.setTextColor(255, 255, 255);
-        pdf.setFont('helvetica', 'bold');
+        pdf.setFont('SharpSans', 'bold');
         pdf.setFontSize(8);
         const numStr = sh.number.toString();
         const numWidth = pdf.getTextWidth(numStr);

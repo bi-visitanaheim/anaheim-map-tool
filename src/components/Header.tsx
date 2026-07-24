@@ -14,10 +14,10 @@ export function Header({ selectedHotels, onClearAll }: HeaderProps) {
       <div className="flex items-center gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight" style={{ color: '#231F20' }}>
-            Visit Anaheim Hotel Planner
+            Visit Anaheim
           </h1>
           <p className="text-sm font-medium" style={{ color: '#43A3A3' }}>
-            Hotel Itinerary Builder
+            Custom Hotel Map Tool
           </p>
         </div>
       </div>
