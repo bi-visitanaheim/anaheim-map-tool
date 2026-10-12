@@ -6,6 +6,12 @@ export interface Hotel {
   distanceFromACC: number;
   lat: number | null;
   lng: number | null;
+  /**
+   * Optional fallback marker position on the map image, as percentages (0–100)
+   * of image width/height. Supabase `hotel_positions` remains the canonical
+   * source; this is only used when a hotel has no row there yet.
+   */
+  fallbackPosition?: { x: number; y: number };
 }
 
 export const hotels: Hotel[] = [
@@ -75,10 +81,12 @@ export const hotels: Hotel[] = [
   { id: "64", name: "Capri Suites Anaheim",                                         address: "2141 S Harbor Blvd.",          city: "Anaheim",       distanceFromACC: 1,   lat: 33.7946245,   lng: -117.9160667  },
   { id: "65", name: "The Westin Anaheim Resort",                                    address: "1030 W Katella Ave",           city: "Anaheim",       distanceFromACC: 0.4, lat: 33.80265519,  lng: -117.9230132  },
   { id: "66", name: "JW Marriott, Anaheim Resort",                                  address: "1775 South Clementine Street", city: "Anaheim",       distanceFromACC: 0.5, lat: 33.80400443,  lng: -117.911742   },
-  { id: "67", name: "Hampton Inn & Suites by Hilton Anaheim Resort Convention Center", address: "100 W. Katella Ave.",       city: "Anaheim",       distanceFromACC: 2.8, lat: 33.8029613,   lng: -117.9071855  },
-  { id: "68", name: "Cambria Hotel & Suites Anaheim Resort",                        address: "101 E. Katella Ave",           city: "Anaheim",       distanceFromACC: 0.9, lat: 33.8037789,   lng: -117.9062716  },
+  { id: "67", name: "Hampton Inn & Suites by Hilton Anaheim Resort Convention Center", address: "100 W. Katella Ave.",       city: "Anaheim",       distanceFromACC: 0.9, lat: 33.8029613,   lng: -117.9071855  },
+  { id: "68", name: "SpringHill Suites Theme Park/Fairfield Inn Theme Park",        address: "101 E. Katella Ave",           city: "Anaheim",       distanceFromACC: 0.9, lat: 33.8037789,   lng: -117.9062716  },
   { id: "69", name: "Anaheim Element by Westin Resort Convention Center",           address: "1600 South Clementine St",     city: "Anaheim",       distanceFromACC: 2,   lat: 33.8084986,   lng: -117.9096587  },
   { id: "70", name: "The Viv Hotel, Anaheim, A Tribute Portfolio Hotel",            address: "1601 S. Anaheim Blvd.",        city: "Anaheim",       distanceFromACC: 1.7, lat: 33.8087939,   lng: -117.9071111  },
   { id: "71", name: "Signature Anaheim Maingate",                                   address: "2200 South Harbor",            city: "Anaheim",       distanceFromACC: 2,   lat: 33.7926191,   lng: -117.914038   },
   { id: "72", name: "Stanford Inn and Suites",                                      address: "2171 S Harbor Blvd",           city: "Anaheim",       distanceFromACC: 0.9, lat: null,          lng: null           },
+  // Map position is an approximation (between Element by Westin and Clementine Hotel on Clementine St.) pending a canonical row in Supabase `hotel_positions`.
+  { id: "73", name: "SunCoast Park Hotel",                                          address: "1640 S. Clementine St.",       city: "Anaheim",       distanceFromACC: 0.8, lat: null,          lng: null,          fallbackPosition: { x: 82, y: 21.3 } },
 ];
