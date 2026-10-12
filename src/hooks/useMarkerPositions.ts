@@ -4,10 +4,12 @@
  * Hotel selections live in Supabase table `selected_hotels`.
  * Canonical x,y positions live in Supabase table `hotel_positions` and are
  * loaded once on mount into a ref — they are immutable at runtime.
+ * Hotels without a Supabase row fall back to `fallbackPosition` in hotels.ts.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { hotels } from '@/data/hotels';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,7 +46,12 @@ export function useMarkerPositions() {
         if (posError) throw posError;
         if (cancelled) return;
 
+        // Seed with local fallback positions for hotels that don't have a
+        // Supabase row yet; Supabase rows (canonical) override them below.
         const posMap: Record<string, MarkerPosition> = {};
+        for (const hotel of hotels) {
+          if (hotel.fallbackPosition) posMap[hotel.id] = { ...hotel.fallbackPosition };
+        }
         for (const row of posData ?? []) {
           posMap[row.hotel_id] = { x: row.x, y: row.y };
         }
