@@ -38,9 +38,7 @@ export function HotelListPanel({
     if (selectedHotelIds.includes(hotel.id)) {
       onDeselectHotel(hotel.id);
     } else {
-      if (selectedHotelIds.length < 20) {
-        onSelectHotel(hotel.id);
-      }
+      onSelectHotel(hotel.id);
     }
   };
 
@@ -52,7 +50,7 @@ export function HotelListPanel({
           Partner Hotels
         </h1>
         <p className="mt-1 text-sm text-primary-foreground/80">
-          Select up to 20 hotels ({selectedHotelIds.length}/20)
+          Select hotels ({selectedHotelIds.length} selected)
         </p>
       </div>
 
