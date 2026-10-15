@@ -10,6 +10,8 @@ import { SHARP_SANS_600_BASE64, SHARP_SANS_700_BASE64 } from '@/lib/pdfFonts';
 
 interface ExportButtonProps {
   selectedHotels: SelectedHotel[];
+  /** Icon-only button for the compact (mobile) header. */
+  compact?: boolean;
 }
 
 // US Letter landscape: 11 x 8.5 inches = 792 x 612 points at 72 DPI
@@ -17,7 +19,7 @@ const PAGE_WIDTH_PT = 792;
 const PAGE_HEIGHT_PT = 612;
 const MARGIN_PT = 24;
 
-export function ExportButton({ selectedHotels }: ExportButtonProps) {
+export function ExportButton({ selectedHotels, compact = false }: ExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
 
   const generatePDF = async () => {
@@ -253,17 +255,18 @@ export function ExportButton({ selectedHotels }: ExportButtonProps) {
       onClick={generatePDF}
       disabled={isExporting || selectedHotels.length === 0}
       className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold shadow-soft"
-      size="lg"
+      size={compact ? 'icon' : 'lg'}
+      aria-label={compact ? 'Export PDF' : undefined}
     >
       {isExporting ? (
         <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Exporting...
+          <Loader2 className={compact ? 'h-4 w-4 animate-spin' : 'mr-2 h-4 w-4 animate-spin'} />
+          {!compact && 'Exporting...'}
         </>
       ) : (
         <>
-          <Download className="mr-2 h-4 w-4" />
-          Export PDF
+          <Download className={compact ? 'h-4 w-4' : 'mr-2 h-4 w-4'} />
+          {!compact && 'Export PDF'}
         </>
       )}
     </Button>
